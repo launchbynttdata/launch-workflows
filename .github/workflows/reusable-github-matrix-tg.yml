@@ -7,6 +7,10 @@ on:
         description: 'Environment within the platform folder to deploy (e.g. sandbox, production)'
         required: true
         type: string
+    outputs:
+      matrix:
+        description: "Environment matrix for Terragrunt"
+        value: ${{ jobs.build-matrix.outputs.matrix }}
 
 permissions:
   contents: read

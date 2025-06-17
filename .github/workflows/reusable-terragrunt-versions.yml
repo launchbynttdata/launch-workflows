@@ -32,12 +32,12 @@ jobs:
 
       - name: "Get Terraform Version"
         id: tf-version
-        uses: launchbynttdata/actions-asdf-tool_versions@8cb786f60a309ae9188384a8c9f7bef6c05800d3
+        uses: launchbynttdata/actions-asdf-tool_versions@b06e77d508922399630dbdce596e31a8e58553d5
         with:
           tool: terraform
 
       - name: "Get Terragrunt Version"
         id: tg-version
-        uses: launchbynttdata/actions-asdf-tool_versions@8cb786f60a309ae9188384a8c9f7bef6c05800d3
+        uses: launchbynttdata/actions-asdf-tool_versions@b06e77d508922399630dbdce596e31a8e58553d5
         with:
           tool: terragrunt

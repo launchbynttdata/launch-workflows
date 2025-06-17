@@ -1,0 +1,43 @@
+name: Deploy Terragrunt Environment
+
+on:
+  workflow_call:
+    inputs:
+      tool_versions_filename:
+        description: "Path to the .tool-versions file in this repository."
+        required: false
+        default: ".tool-versions"
+        type: string
+    outputs:
+      tg_version:
+        description: Version of Terragrunt to use
+        value: ${{ jobs.get-terragrunt-versions.outputs.tg_version }}
+      tf_version:
+        description: Version of Terraform to use
+        value: ${{ jobs.get-terragrunt-versions.outputs.tf_version }}
+
+permissions:
+    contents: read
+
+jobs:
+  get-terragrunt-versions:
+    name: "Get versions for Terragrunt"
+    runs-on: ubuntu-latest
+    outputs:
+      tf_version: ${{ steps.tf-version.outputs.version }}
+      tg_version: ${{ steps.tg-version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
+
+      - name: "Get Terraform Version"
+        id: tf-version
+        uses: launchbynttdata/actions-asdf-tool_versions@v0
+        with:
+          tool: terraform
+
+      - name: "Get Terragrunt Version"
+        id: tg-version
+        uses: launchbynttdata/actions-asdf-tool_versions@v0
+        with:
+          tool: terragrunt

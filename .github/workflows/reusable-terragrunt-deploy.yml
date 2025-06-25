@@ -13,6 +13,10 @@ on:
         required: true
         default: '0.54.11'
         type: string
+      gh_environment:
+        description: 'GitHub Environment to deploy to (e.g. sandbox, production). If not supplied, will be set from the environment input.'
+        required: false
+        type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. sandbox) to deploy'
         required: true
@@ -34,7 +38,7 @@ jobs:
   deploy:
     name: "Plan & Deploy ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.gh_environment || inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f

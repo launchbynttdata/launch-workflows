@@ -1,10 +1,9 @@
-name: Deploy Terragrunt Environment
-
+name: Deploy Terragrunt Sandbox Ephemeral Environment
 on:
   workflow_call:
     inputs:
       git_branch:
-        description: 'Branch triggering this destroy.'
+        description: 'Branch triggering this deploy.'
         required: true
         type: string
       tf_version:
@@ -17,12 +16,8 @@ on:
         required: true
         default: '0.54.11'
         type: string
-      gh_environment:
-        description: 'GitHub Environment to deploy to (e.g. test, production). If not supplied, will be set from the environment input.'
-        required: false
-        type: string
-      environment:
-        description: 'Environment (subfolder of platform, e.g. test) to deploy'
+      assume_role_arn:
+        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
         required: true
         type: string
       region:
@@ -40,23 +35,16 @@ permissions:
 
 jobs:
   deploy:
-    name: "Plan & Deploy ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
+    name: "Plan & Deploy ephemeral/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.gh_environment || inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
 
-      - name: "Validate GitHub Environment"
-        run: |
-          raised=0
-          test -z "${{ vars.DEPLOY_ROLE_ARN }}" && (echo "::error title=Repository Configuration Incomplete::This repository is missing an environment variable for DEPLOY_ROLE_ARN in the ${{ inputs.environment }} environment!"; raised=1)
-          exit $raised
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@3d8cba388a057b13744d61818a337e40a119b1a7
         with:
-          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ inputs.assume_role_arn }}
           role-session-name: ${{ github.run_id }}
           aws-region: ${{ inputs.region }}
 
@@ -80,11 +68,12 @@ jobs:
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
             TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+            GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'plan -out=${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
       - name: Deploy
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
@@ -96,8 +85,9 @@ jobs:
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
             TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+            GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

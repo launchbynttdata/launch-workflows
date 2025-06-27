@@ -2,6 +2,10 @@ name: Deploy Terragrunt Sandbox Ephemeral Environment
 on:
   workflow_call:
     inputs:
+      git_branch:
+        description: 'Branch triggering this destroy.'
+        required: true
+        type: string
       tf_version:
           description: 'Version of Terraform to utilize'
           required: true
@@ -68,6 +72,7 @@ jobs:
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+            GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
@@ -83,6 +88,7 @@ jobs:
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+            GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}

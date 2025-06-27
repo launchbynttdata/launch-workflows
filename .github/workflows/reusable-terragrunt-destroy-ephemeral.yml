@@ -1,4 +1,4 @@
-name: Deploy Terragrunt Sandbox Ephemeral Environment
+name: Destroy Terragrunt Sandbox Ephemeral Environment
 on:
   workflow_call:
     inputs:
@@ -21,11 +21,11 @@ on:
         required: true
         type: string
       region:
-        description: 'Region within the environment (e.g. us-east-1) to deploy'
+        description: 'Region within the sandbox environment (e.g. us-east-1) to destroy'
         required: true
         type: string
       env_id:
-        description: 'Instance within the region (e.g. 000) to deploy.'
+        description: 'Instance within the region (e.g. 000) to destroy.'
         required: true
         type: string
 
@@ -34,18 +34,12 @@ permissions:
     contents: read
 
 jobs:
-  deploy:
+  destroy:
     name: "Destroy ephemeral/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
-
-      - name: "Validate GitHub Environment"
-        run: |
-          raised=0
-          test -z "${{ inputs.assume_role_arn }}" && (echo "::error title=Repository Configuration Incomplete::This repository is missing an environment variable for DEPLOY_ROLE_ARN in the ${{ inputs.environment }} environment!"; raised=1)
-          exit $raised
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@3d8cba388a057b13744d61818a337e40a119b1a7
@@ -61,23 +55,7 @@ jobs:
             echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
             echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
             echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-
-      - name: Plan and Deploy
-        id: plan
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
-        env:
-            AWS_REGION: ${{ inputs.region }}
-            INPUT_PRE_EXEC_0: |
-              sudo apt update -yqq && sudo apt install python3 -yqq
-            TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-            TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-            TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-            GIT_BRANCH: ${{ inputs.git_branch }}
-        with:
-          tf_version: ${{ inputs.tf_version }}
-          tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+            echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
@@ -88,9 +66,10 @@ jobs:
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
             GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
           tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_command: 'destroy'

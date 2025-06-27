@@ -3,6 +3,10 @@ name: Deploy Terragrunt Environment
 on:
   workflow_call:
     inputs:
+      git_branch:
+        description: 'Branch triggering this destroy.'
+        required: true
+        type: string
       tf_version:
           description: 'Version of Terraform to utilize'
           required: true
@@ -14,11 +18,11 @@ on:
         default: '0.54.11'
         type: string
       gh_environment:
-        description: 'GitHub Environment to deploy to (e.g. sandbox, production). If not supplied, will be set from the environment input.'
+        description: 'GitHub Environment to deploy to (e.g. test, production). If not supplied, will be set from the environment input.'
         required: false
         type: string
       environment:
-        description: 'Environment (subfolder of platform, e.g. sandbox) to deploy'
+        description: 'Environment (subfolder of platform, e.g. test) to deploy'
         required: true
         type: string
       region:
@@ -63,8 +67,9 @@ jobs:
             echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
             echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
             echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
-      - name: Plan and Deploy
+      - name: Plan
         id: plan
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
@@ -74,6 +79,7 @@ jobs:
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
@@ -89,6 +95,7 @@ jobs:
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}

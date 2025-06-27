@@ -37,6 +37,7 @@ jobs:
       id-token: write
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-terragrunt-deploy.yml@<commit hash>
     with:
+      git_branch: ${{ github.head_ref }}
       tf_version: '1.5.5'
       tg_version: '0.54.11'
       environment: 'production'

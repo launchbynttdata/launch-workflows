@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       git_branch:
-        description: 'Branch triggering this plan.'
+        description: 'Branch triggering this plan'
         required: true
         type: string
       tf_version:
@@ -17,10 +17,10 @@ on:
         required: true
         default: '0.54.11'
         type: string
-      gh_environment:
-        description: 'GitHub Environment to plan to (e.g. test, production). If not supplied, will be set from the environment input.'
-        required: false
-        type: string
+      assume_role_arn:
+          description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+          required: true
+          type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. test) to plan'
         required: true
@@ -30,7 +30,7 @@ on:
         required: true
         type: string
       env_id:
-        description: 'Instance within the region (e.g. 000) to plan.'
+        description: 'Instance within the region (e.g. 000) to plan'
         required: true
         type: string
 
@@ -39,24 +39,17 @@ permissions:
     contents: read
 
 jobs:
-  deploy:
-    name: "Plan & Deploy ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
+  plan:
+    name: "Plan ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.gh_environment || inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
 
-      - name: "Validate GitHub Environment"
-        run: |
-          raised=0
-          test -z "${{ vars.DEPLOY_ROLE_ARN }}" && (echo "::error title=Repository Configuration Incomplete::This repository is missing an environment variable for DEPLOY_ROLE_ARN in the ${{ inputs.environment }} environment!"; raised=1)
-          exit $raised
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@3d8cba388a057b13744d61818a337e40a119b1a7
         with:
-          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ inputs.assume_role_arn }}
           role-session-name: ${{ github.run_id }}
           aws-region: ${{ inputs.region }}
 

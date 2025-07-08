@@ -22,14 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f # (v4.2.2)
+        uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
 
       - name: Setup asdf
         # We use the 'setup' variant of this action, because we have some custom behavior in 
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
-        uses: asdf-vm/actions/setup@1902764435ca0dd2f3388eea723a4f92a4eb8302 # (v4.0.0)
+        uses: asdf-vm/actions/setup@1902764435ca0dd2f3388eea723a4f92a4eb8302
 
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # (v4.2.3)
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         id: cache
@@ -51,7 +51,7 @@ jobs:
           export AWS_REGION=${{ inputs.region }}
           make configure
 
-      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # (v4.2.3)
+      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         id: save-cache
         name: Cache asdf tools
@@ -65,7 +65,7 @@ jobs:
           make lint
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # (v4.2.1)
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: ${{ inputs.assume_role_arn }}
           role-session-name: ${{ github.run_id }}

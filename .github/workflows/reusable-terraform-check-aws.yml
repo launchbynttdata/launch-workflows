@@ -1,0 +1,91 @@
+name: Check AWS Terraform Code
+
+on:
+  workflow_call:
+    inputs:
+      assume_role_arn:
+        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+        required: true
+        type: string
+      region:
+        description: 'Region within the environment (e.g. us-east-1) to deploy'
+        default: 'us-east-2'
+        required: true
+        type: string
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: "Check AWS Terraform Code"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
+
+      - name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in 
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@1902764435ca0dd2f3388eea723a4f92a4eb8302
+
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        id: cache
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          export AWS_REGION=${{ inputs.region }}
+          make configure
+
+      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        id: save-cache
+        name: Cache asdf tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - name: "make lint"
+        run: |
+          make lint
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
+        with:
+          role-to-assume: ${{ inputs.assume_role_arn }}
+          role-session-name: ${{ github.run_id }}
+          aws-region: ${{ inputs.region }}
+
+      - name: "Create AWS Profile"
+        # Works around the interactions of aws-actions/configure-aws-credentials with 4.x.x AWS TF provider.
+        # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
+        # to remove line setting the profile in our examples, or we see failures to initialize the provider.
+        run: |
+          set -x
+          mkdir -p ~/.aws
+          echo "[default]" > ~/.aws/credentials
+          echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
+          echo "aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" >> ~/.aws/credentials
+          # Fixup provider.tf
+          grep -v "profile =" examples/minimal/provider.tf > examples/minimal/provider.tf.tmp
+          mv examples/minimal/provider.tf.tmp examples/minimal/provider.tf
+
+      - name: "make test"
+        run: |
+          make test

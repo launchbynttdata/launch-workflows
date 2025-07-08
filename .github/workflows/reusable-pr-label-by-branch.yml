@@ -1,0 +1,35 @@
+name: Label Pull Request by Branch
+
+on:
+  workflow_call:
+
+jobs:
+  configure-labels:
+    name: Configure Labels
+    permissions:
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
+      - name: Configure missing labels
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label ls --json name > labels.json
+          jq -e 'if map(select(.name | contains ("patch"))) == [] then null else "Label patch exists" end' labels.json || gh label create patch --color "006b75"
+          jq -e 'if map(select(.name | contains ("minor"))) == [] then null else "Label minor exists" end' labels.json || gh label create minor --color "fbca04"
+          jq -e 'if map(select(.name | contains ("major"))) == [] then null else "Label major exists" end' labels.json || gh label create major --color "b60205"
+  label-pr:
+    name: Label Pull Request
+    needs: [ configure-labels ]
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+        with:
+          disable-autolabeler: false
+          disable-releaser: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,59 @@
+name: Python Tests
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version to test against. Currently, this only supports one version per workflow run.'
+        required: false
+        type: string
+        default: '3.11'
+      run-ruff:
+        description: 'Run Ruff for linting and formatting checks'
+        required: false
+        type: boolean
+        default: true
+      report-coverage:
+        description: 'Report on code coverage with a comment on the PR'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  checks: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "${{ inputs.python-version }}" ]
+    steps:
+    - uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@bd01e18f51369d5a26f1651c3cb451d3417e3bba
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Ruff check
+      if: ${{ inputs.run-ruff }}
+      run: |
+        uvx ruff check
+
+    - name: Test with pytest
+      run: |
+        uv run pytest
+
+    - name: Report coverage
+      if: ${{ inputs.report-coverage }}
+      uses: MishaKav/pytest-coverage-comment@13d3c18e21895566c746187c9ea74736372e5e91
+      with:
+        pytest-xml-coverage-path: ./htmlcov/coverage.xml
+        title: Coverage report for Python ${{ matrix.python-version }}
+        remove-link-from-badge: true
+        unique-id-for-comment: ${{ matrix.python-version }}
+        coverage-path-prefix: src/

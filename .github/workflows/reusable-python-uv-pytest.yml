@@ -20,7 +20,7 @@ on:
         default: true
 
 permissions:
-  contents: write
+  contents: read
   checks: write
   pull-requests: write
 

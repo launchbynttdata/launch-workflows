@@ -1,0 +1,54 @@
+name: Create and Publish Release
+
+on:
+  workflow_call:
+    inputs:
+      config_name:
+        type: string
+        description: 'The name of the release drafter config file to use. Default: release-drafter.yml'
+        required: false
+        default: 'release-drafter.yml'
+      commitish:
+        type: string
+        description: 'The release target, i.e. branch or commit it should point to. Default: main'
+        required: false
+        default: 'main'
+      latest:
+        type: boolean
+        description: 'Whether this should be marked as the latest release. Default: true'
+        required: false
+        default: true
+      disable_autolabeler:
+        type: boolean
+        description: 'Whether to disable the autolabeler. Autolabeler should remain disabled if you label the pull requests with another workflow. Default: true'
+        required: false
+        default: true
+      run_post_release_workflow:
+        type: boolean
+        description: 'Trigger a post-release workflow at .github/workflows/release-post-actions.yml within your repository that receives a "version" input with the version that was just released. This workflow can do whatever you need, but generally is used to e.g. release a package to a package regsitry. Default: false'
+        required: false
+        default: false
+    outputs:
+      release_version:
+        description: 'The version of the release that was created by this workflow. This is the tag name of the release.'
+        value: ${{ jobs.create-release.outputs.release_version }}
+
+jobs:
+  create-release:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.release-drafter.outputs.tag_name }}
+    steps:
+      - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+        id: release-drafter
+        with:
+          config-name: ${{ inputs.config_name }}
+          commitish: ${{ inputs.commitish }}
+          disable-autolabeler: ${{ inputs.disable_autolabeler }}
+          publish: true
+          latest: ${{ inputs.latest }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

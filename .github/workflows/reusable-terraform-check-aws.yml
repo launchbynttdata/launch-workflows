@@ -12,6 +12,7 @@ on:
         default: 'us-east-2'
         required: true
         type: string
+
 permissions:
   id-token: write
   contents: read

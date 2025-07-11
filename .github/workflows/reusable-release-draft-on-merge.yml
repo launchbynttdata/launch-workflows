@@ -1,0 +1,32 @@
+name: Draft Release
+
+on:
+  workflow_call:
+    inputs:
+      commitish:
+        type: string
+        description: 'The release target, i.e. branch or commit it should point to. Default: main'
+        required: false
+        default: 'main'
+      latest:
+        type: boolean
+        description: 'Whether this should be marked as the latest release. Default: true'
+        required: false
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  draft-release:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+        with:
+          commitish: ${{ inputs.commitish}}
+          latest: ${{ inputs.latest }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

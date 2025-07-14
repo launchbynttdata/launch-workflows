@@ -58,7 +58,7 @@ jobs:
             echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
+        uses: gruntwork-io/terragrunt-action@93eda7b2b97306ef88b517a61d8a9d0b035e7c75
         env:
             AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |

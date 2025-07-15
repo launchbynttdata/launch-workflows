@@ -6,7 +6,7 @@ This workflow is intended for use with software teams that release every single 
 
 ## Usage
 
-To utilize this reusable workflow, add a new workflow to your repository (suggested name: `.github/workflows/release-draft.yml`):
+To utilize this reusable workflow, add a new workflow to your repository (suggested name: `.github/workflows/release-publish.yml`):
 
 
 ```yaml

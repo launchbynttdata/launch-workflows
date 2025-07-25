@@ -1,0 +1,18 @@
+name: Draft Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  draft-release:
+    name: "Draft Release on Merge"
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-release-draft-on-merge.yml
+    secrets: inherit # pragma: allowlist secret

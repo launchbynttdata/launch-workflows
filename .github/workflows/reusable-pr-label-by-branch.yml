@@ -7,6 +7,7 @@ jobs:
   configure-labels:
     name: Configure Labels
     permissions:
+      contents: read
       issues: write
     runs-on: ubuntu-latest
     steps:
@@ -28,8 +29,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+        id: autolabel
         with:
           disable-autolabeler: false
           disable-releaser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      - uses: actions/checkout@09d2acae674a48949e3602304ab46fd20ae0c42f
+        if: steps.autolabel.outcome == 'failure'
+      - name: Handle failure for new repositories
+        if: steps.autolabel.outcome == 'failure'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::warning::Release-drafter failed to auto-label your pull request!"
+          PR_NUMBER=$(echo "${GITHUB_REF}" | cut -d'/' -f3)
+          if [[ $PR_NUMBER -eq "1" ]]; then
+            echo "::notice::This appears to be a new repository and will be labeled as a major release."
+            gh pr edit "${PR_NUMBER}" --add-label "major"
+          else
+            echo "::error::This is not a new repository, and we cannot auto-label your pull request. Apply the appropriate label manually."
+            exit 1
+          fi

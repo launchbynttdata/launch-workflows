@@ -6,15 +6,17 @@ This workflow uses our standard Terragrunt folder structure and produces a matri
 
 Let's say we have a repository with the structure shown below:
 
-> ./
->   platform/
->     sandbox/
->       us-east-1/
->         000/
->         001/
->       us-west-1/
->         000/
->         001/
+```
+./
+  platform/
+    sandbox/
+      us-east-1/
+        000/
+        001/
+      us-west-1/
+        000/
+        001/
+```
 
 We want to run Terragrunt to deploy all the environments that are under the "sandbox" environment, so we invoke the workflow as follows:
 

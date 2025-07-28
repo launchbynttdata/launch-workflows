@@ -1,10 +1,10 @@
 # Deploy an Ephemeral Terragrunt Environment
 
-Plans and deploys a single Terragrunt environment in an ephemeral manner; you are expected to use the [reusable-terragrunt-destroy-ephemeral](./reusable-terragrunt-destroy-ephemeral.md) workflow to remove the environment when you are done with it.
+Plans and deploys a single Terragrunt environment in an ephemeral manner; you are expected to use the [reusable-terragrunt-destroy-ephemeral](./reusable-terragrunt-destroy-ephemeral.md) workflow to remove the environment when you are done with it. In order to avoid naming conflicts with ephemeral environments, care must be taken in the Terraform module that Terragrunt references to ensure resources are named in a unique manner.
 
-Unlike the persistent Terragrunt deployment workflow, this workflow does not require a GitHub Environment to exist, you must pass a role ARN which will be assumed prior to invoking any Terragrunt commands.
+This workflow operates only on the `sandbox` environment folder. Unlike the persistent Terragrunt deployment workflow, this workflow does not require a GitHub Environment to exist, you must pass a role ARN which will be assumed prior to invoking any Terragrunt commands.
 
-The typical use case for this workflow is to create a throwaway environment each time a pull request is created, and then use the destroy workflow to clean up the environment once the PR closes. This workflow operates only on the `sandbox` environment folder.
+The typical use case for this workflow is to create a throwaway environment each time a pull request is created, and then use [the destroy workflow](./reusable-terragrunt-destroy-ephemeral.md) to clean up the environment once the PR closes.
 
 ## Usage
 

@@ -1,5 +1,8 @@
 # Label a Pull Request using the Branch Name strategy
 
+> [!NOTE]
+> This workflow uses [release-drafter](https://github.com/release-drafter/release-drafter) for most of the heavy lifting. The behaviors described here are a result of a release-drafter.yml configuration similar to [the one used in this repository](../.github/release-drafter.yml). This is a highly flexible workflow, and if you wish to deviate from our standard approach, a review of the capabilities and [configuration options](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#configuration-options) is highly encouraged.
+
 Applies labels to your pull request using the Branch Naming strategy, that is,
 
 | Branch Prefix                         | SemVer Change Type | Version Increment Example | Notes                                                                                                                       |   |

@@ -4,7 +4,7 @@ Runs Python unit tests using Pytest in a reusable GitHub Actions workflow. This 
 
 ## Usage
 
-To check the Terraform code on a PR:
+To run Python tests against a given PR:
 
 ```yaml
 name: Run Tests

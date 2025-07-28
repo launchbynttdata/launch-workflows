@@ -1,6 +1,10 @@
 # Run Python Unit Tests with Pytest
 
-Runs Python unit tests using Pytest in a reusable GitHub Actions workflow. This workflow is designed to be used in pull requests to ensure that the code changes do not break existing functionality. This workflow can be customized to report coverage in a Pull Request Comment or not, depending on the needs of the project.
+Runs Python unit tests using Pytest in a reusable GitHub Actions workflow. This workflow is designed to be used in pull requests to ensure that the code changes do not break existing functionality.
+
+Pytest can be configured through files in your repository, and we recommend using [pyproject.toml](https://docs.pytest.org/en/stable/reference/customize.html#configuration-file-formats) for Pytest and any other Python configurations where possible. See [the Pytest documentation](https://docs.pytest.org/en/stable/reference/reference.html#ini-options-ref) for all configuration options.
+
+This workflow can perform rich unit test coverage checking, set the input for `report-coverage` to true, ensure that your project depends on `pytest-cov`, and consider setting your pyproject.toml options like [this example](https://github.com/launchbynttdata/launch-cert-tool/blob/ffe571499003e0ace49484da9379247abc97a1cf/pyproject.toml#L52-L61).
 
 ## Usage
 

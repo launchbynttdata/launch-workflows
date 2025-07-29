@@ -84,8 +84,10 @@ jobs:
         chmod +x ~/.local/bin/repo
         echo "$HOME/.local/bin" >> $GITHUB_PATH
         set -x
-        git config user.name "GitHub Actions"
-        git config user.email "noreply@launch.nttdata.com"
+        export GIT_AUTHOR_NAME="GitHub Actions"
+        export GIT_COMMITTER_NAME="GitHub Actions"
+        export GIT_AUTHOR_EMAIL="noreply@launch.nttdata.com"
+        export GIT_COMMITTER_EMAIL="noreply@launch.nttdata.com"
         export AWS_REGION=${{ inputs.lcaf-aws-region }}
 
     - name: Ruff check

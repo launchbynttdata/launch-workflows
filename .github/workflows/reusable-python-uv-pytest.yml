@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: '3.11'
+      asdf-install:
+        description: 'Whether to install supplementary tools from .tool-versions'
+        required: false
+        type: boolean
+        default: true
       run-ruff:
         description: 'Run Ruff for linting and formatting checks'
         required: false
@@ -33,6 +38,26 @@ jobs:
         python-version: [ "${{ inputs.python-version }}" ]
     steps:
     - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+    - name: Restore cached asdf tools
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
+      if: ${{ inputs.asdf-install }}
+      id: cache
+      with:
+        path: ~/.asdf
+        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+    - name: asdf install
+      if: ${{ inputs.asdf-install }}
+      uses: asdf-vm/actions/install@1902764435ca0dd2f3388eea723a4f92a4eb8302 
+
+    - name: Cache asdf tools
+      uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
+      id: save-cache
+      if: inputs.asdf-install == 'true' && steps.cache.outputs.cache-hit != 'true'
+      with:
+        path: ~/.asdf
+        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc

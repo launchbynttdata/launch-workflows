@@ -1,4 +1,4 @@
-name: Deploy Terragrunt Environment
+name: Get Terragrunt Versions
 
 on:
   workflow_call:

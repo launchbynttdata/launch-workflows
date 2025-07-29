@@ -13,11 +13,16 @@ on:
         required: false
         type: boolean
         default: true
-      legacy-makefile-setup:
-        description: 'Whether to set the environment up for the legacy LCAF Makefile'
+      lcaf-makefile-setup:
+        description: 'Whether to set the environment up for the LCAF Makefile'
         required: false
         type: boolean
         default: false
+      lcaf-aws-region:
+        description: 'AWS region to use for LCAF Makefile setup. Ignored if lcaf-makefile-setup is false.'
+        required: false
+        type: string
+        default: 'us-east-2'
       run-ruff:
         description: 'Run Ruff for linting and formatting checks'
         required: false
@@ -70,8 +75,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup Repository for Makefile
-      if: ${{ inputs.legacy-makefile-setup }}
-      # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+      if: ${{ inputs.lcaf-makefile-setup }}
+      # Ensure the 'repo' tool is installed, set up git to make the Makefile happy
       shell: bash
       run: |
         mkdir -p ~/.local/bin
@@ -81,7 +86,7 @@ jobs:
         set -x
         git config user.name "GitHub Actions"
         git config user.email "noreply@launch.nttdata.com"
-        export AWS_REGION=${{ env.TERRAFORM_CHECK_AWS_REGION || 'us-east-2' }}
+        export AWS_REGION=${{ inputs.lcaf-aws-region }}
 
     - name: Ruff check
       if: ${{ inputs.run-ruff }}

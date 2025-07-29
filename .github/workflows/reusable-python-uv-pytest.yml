@@ -81,8 +81,7 @@ jobs:
         set -x
         git config user.name "GitHub Actions"
         git config user.email "noreply@launch.nttdata.com"
-        export AWS_REGION=${{ env.TERRAFORM_CHECK_AWS_REGION }}
-        make configure
+        export AWS_REGION=${{ env.TERRAFORM_CHECK_AWS_REGION || 'us-east-2' }}
 
     - name: Ruff check
       if: ${{ inputs.run-ruff }}

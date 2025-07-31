@@ -83,9 +83,8 @@ jobs:
           echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
           echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
           echo "aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" >> ~/.aws/credentials
-          # Fixup provider.tf
-          grep -v "profile =" examples/minimal/provider.tf > examples/minimal/provider.tf.tmp
-          mv examples/minimal/provider.tf.tmp examples/minimal/provider.tf
+          # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
+          find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
 
       - name: "make test"
         run: |

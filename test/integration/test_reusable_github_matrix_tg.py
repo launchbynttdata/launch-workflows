@@ -105,12 +105,10 @@ def test_reusable_github_matrix_tg(temporary_repository):
     )
     status_happy_path = wait_for_workflow_run_completion(run_happy_path)
     if status_happy_path != WorkflowRunStatus.COMPLETED:
-        sleep(60)
         raise AssertionError(
             f"Workflow run for happy path did not complete successfully: {status_happy_path}"
         )
     if run_happy_path.conclusion != WorkflowRunConclusion.SUCCESS:
-        sleep(60)
         raise AssertionError(
             f"Workflow run for happy path did not succeed as expected: {run_happy_path.conclusion}"
         )
@@ -122,12 +120,10 @@ def test_reusable_github_matrix_tg(temporary_repository):
         run_missing_platform_folder
     )
     if status_missing_platform_folder != WorkflowRunStatus.COMPLETED:
-        sleep(60)
         raise AssertionError(
             f"Workflow run for missing platform folder did not complete as expected: {status_missing_platform_folder}"
         )
     if run_missing_platform_folder.conclusion != WorkflowRunConclusion.FAILURE:
-        sleep(60)
         raise AssertionError(
             f"Workflow run for missing platform folder did not fail as expected: {run_missing_platform_folder.conclusion}"
         )

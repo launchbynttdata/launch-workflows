@@ -1,0 +1,57 @@
+name: Run Tests
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.13" ]
+    steps:
+    - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+    - name: Restore cached asdf tools
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
+      id: cache
+      with:
+        path: ~/.asdf
+        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+    - name: asdf install
+      uses: asdf-vm/actions/install@1902764435ca0dd2f3388eea723a4f92a4eb8302 
+
+    - name: Cache asdf tools
+      uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
+      id: save-cache
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      with:
+        path: ~/.asdf
+        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e
+      id: app-token
+      with:
+        app-id: ${{ vars.APP_ID }}
+        owner: ${{ vars.APP_OWNER }}
+        private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+    - name: Test with pytest
+      env:
+        LAUNCH_WORKFLOWS_REF_TO_TEST: ${{ github.ref_name }}
+        GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        uv run pytest

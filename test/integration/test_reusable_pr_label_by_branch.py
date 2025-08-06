@@ -154,6 +154,7 @@ def test_reusable_pr_label_by_branch(temporary_repository):
             )
         pr_labels = [label.name for label in pull_request.get_labels()]
         if expected_labels != pr_labels:
+            sleep(90)
             raise AssertionError(
                 f"Expected labels '{expected_labels}' didn't match pull request: {pr_labels} for branch {branch_name}"
             )

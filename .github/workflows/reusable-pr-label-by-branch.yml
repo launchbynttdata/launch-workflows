@@ -28,27 +28,74 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        with:
+          fetch-depth: 0
+      - name: Check prerequisites for auto-labeling
+        id: prerequisite-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat <<EOC > first-time-comment.md
+          > [!TIP]
+          > This is your first PR, and it will be labeled as a \`major\` release.
+          > 
+          > If you need to change this because you have existing tags, manually remove the label and apply the appropriate one (\`patch\`, \`minor\`).
+          EOC
+
+          PR_NUMBER=$(echo "${GITHUB_REF}" | cut -d'/' -f3)
+            if git diff --name-only HEAD origin/${{ github.event.pull_request.base.ref }} | grep -q "^\.github/release-drafter\.yml$"; then
+              echo "updates_configuration=true" >> $GITHUB_OUTPUT
+            else
+              echo "updates_configuration=false" >> $GITHUB_OUTPUT
+            fi
+          if [[ $PR_NUMBER -eq "1" ]]; then
+            if git cat-file -e ${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
+              # First PR, but we have a release-drafter.yml file on the main branch so we can let it proceed as normal.
+              echo "auto_label=true" >> $GITHUB_OUTPUT
+            else
+              # First PR, but no release-drafter.yml file on the main branch, so we can't auto-label it.
+              echo "auto_label=false" >> $GITHUB_OUTPUT
+              gh pr edit "${PR_NUMBER}" --add-label "major"
+              gh pr comment "${PR_NUMBER}" --edit-last --create-if-none --body-file first-time-comment.md
+            fi
+          else
+            # Not the first PR, so we can attempt to auto-label it.
+            echo "auto_label=true" >> $GITHUB_OUTPUT
+          fi
+          
+          rm first-time-comment.md
       - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+        if: steps.prerequisite-check.outputs.auto_label == 'true'
         id: autolabel
         with:
           disable-autolabeler: false
           disable-releaser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
-        if: steps.autolabel.outcome == 'failure'
-      - name: Handle failure for new repositories
-        if: steps.autolabel.outcome == 'failure'
+        # If the current PR includes changes to the release-drafter.yml file, the auto-labeler failing due to a bad configuration on the default branch is acceptable, as it's about to get new config.
+        continue-on-error: ${{ steps.prerequisite-check.outputs.updates_configuration == 'true' }}
+      - name: Comment if auto-labeling failed but the workflow was allowed to complete
+        if: steps.autolabel.outcome == 'failure' && steps.prerequisite-check.outputs.updates_configuration == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "::warning::Release-drafter failed to auto-label your pull request!"
           PR_NUMBER=$(echo "${GITHUB_REF}" | cut -d'/' -f3)
-          if [[ $PR_NUMBER -eq "1" ]]; then
-            echo "::notice::This appears to be a new repository and will be labeled as a major release."
-            gh pr edit "${PR_NUMBER}" --add-label "major"
-          else
-            echo "::error::This is not a new repository, and we cannot auto-label your pull request. Apply the appropriate label manually."
-            exit 1
-          fi
+          cat <<EOC > comment.md
+
+          > [!CAUTION]
+          > Auto-labeling failed, likely due to a misconfiguration in the \`.github/release-drafter.yml\` file on the default branch. 
+          > 
+          > The auto-labeler workflow was allowed to complete successfully because you have a configuration change to \`.github/release-drafter.yml\` in this pull request. This does not guarantee your changes are valid.
+          >           
+          > Please manually apply the appropriate label (\`patch\`, \`minor\`, \`major\`) to this pull request.
+          EOC
+          gh pr comment "${PR_NUMBER}" --edit-last --create-if-none --body-file comment.md
+          rm comment.md
+      - name: Remove comment if auto-labeling succeeded
+        if: steps.autolabel.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(echo "${GITHUB_REF}" | cut -d'/' -f3)
+          gh pr comment "${PR_NUMBER}" --delete-last --yes || true

@@ -125,10 +125,10 @@ def test_reusable_pr_label_by_branch(temporary_repository):
     }
     sleep(1)
 
+    main_commit_sha = github_repo.get_branch("main").commit.sha
+
     for branch_name, expected_labels in branch_name_label_map.items():
-        github_repo.create_git_ref(
-            f"refs/heads/{branch_name}", github_repo.get_branch("main").commit.sha
-        )
+        github_repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=main_commit_sha)
         sleep(1)
         populate_readme_file(github_repo, branch=branch_name)
         pull_request = github_repo.create_pull(

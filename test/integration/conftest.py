@@ -37,23 +37,6 @@ def repo_name() -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function")
-def organization_repo(
-    request, organization, repo_name
-) -> Generator[Repository, None, None]:
-    repo = organization.create_repo(
-        name=repo_name,
-        description=f"Test Repository for Integration Test: {request.node.name}",
-        private=False,
-        visibility="public",
-        auto_init=False,
-    )
-
-    yield repo
-
-    repo.delete()
-
-
-@pytest.fixture(scope="function")
 def local_repo(tmp_path) -> Generator[pathlib.Path, None, None]:
     """
     Fixture to provide a local repository path for testing.
@@ -74,7 +57,7 @@ def local_repo(tmp_path) -> Generator[pathlib.Path, None, None]:
 
 @pytest.fixture(scope="function")
 def temporary_repository(
-    test_organization_name, organization, repo_name, tmp_path
+    request, test_organization_name, organization, repo_name, tmp_path
 ) -> Generator[tuple[Repository, Repo], None, None]:
     """
     Fixture to create a temporary GitHub repository for testing.
@@ -82,7 +65,7 @@ def temporary_repository(
     """
     github_repo = organization.create_repo(
         name=repo_name,
-        description="Temporary Repository for Testing",
+        description=f"Test Repository for Integration Test: {request.node.name}",
         private=False,
         visibility="public",
         auto_init=False,

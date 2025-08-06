@@ -123,6 +123,7 @@ def test_reusable_pr_label_by_branch(temporary_repository):
         "feature!/breaking": ["major"],
         "unexpected/prefix": [],
     }
+    sleep(1)
 
     for branch_name, expected_labels in branch_name_label_map.items():
         github_repo.create_git_ref(

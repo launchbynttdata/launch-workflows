@@ -37,10 +37,12 @@ def repo_name() -> Generator[str, None, None]:
 
 
 @pytest.fixture(scope="function")
-def organization_repo(organization, repo_name) -> Generator[Repository, None, None]:
+def organization_repo(
+    request, organization, repo_name
+) -> Generator[Repository, None, None]:
     repo = organization.create_repo(
         name=repo_name,
-        description="Test Repository for Integration Tests",
+        description=f"Test Repository for Integration Test: {request.node.name}",
         private=False,
         visibility="public",
         auto_init=False,

@@ -134,7 +134,7 @@ def test_reusable_pr_label_by_branch(temporary_repository):
         pull_request = github_repo.create_pull(
             base="main",
             head=branch_name,
-            title=f"Test PR Label for {branch_name} - Happy Path",
+            title=f"Test PR Label for {branch_name}",
             body=f"This is a test pull request to validate the autolabeler applies the {expected_labels} label to the branch name {branch_name}.",
         )
 

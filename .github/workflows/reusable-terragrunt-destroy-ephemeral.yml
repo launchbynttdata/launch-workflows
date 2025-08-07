@@ -57,7 +57,7 @@ jobs:
             echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
             echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy
+      - name: Destroy
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
             AWS_REGION: ${{ inputs.region }}

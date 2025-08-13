@@ -30,7 +30,7 @@ jobs:
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
         uses: asdf-vm/actions/setup@1902764435ca0dd2f3388eea723a4f92a4eb8302
 
-      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         id: cache
@@ -52,7 +52,7 @@ jobs:
           export AWS_REGION=${{ inputs.region }}
           make configure
 
-      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
+      - uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         id: save-cache
         name: Cache asdf tools

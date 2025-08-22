@@ -1,4 +1,4 @@
-name: Check AWS Terraform Code
+name: Check Azure Terraform Code
 
 on:
   workflow_call:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   check:
-    name: "Check AWS Terraform Code"
+    name: "Check Azure Terraform Code"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -27,7 +27,7 @@ jobs:
       contents: read
       id-token: write
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-terraform-check-azure.yml@ref
-    secrets: inherit
+    secrets: inherit # pragma: allowlist secret
     
     # Alternately, pass the following secrets:
     #   TERRAFORM_CHECK_AZURE_CLIENT_ID: ${{ secrets.your_azure_client_id_secret }}

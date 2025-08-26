@@ -1,0 +1,67 @@
+name: Check Azure Terraform Code
+
+on:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: "Check Azure Terraform Code"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+
+      - name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in 
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@1902764435ca0dd2f3388eea723a4f92a4eb8302
+
+      - uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        id: cache
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+          make configure
+
+      - uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        id: save-cache
+        name: Cache asdf tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - name: "make lint"
+        run: |
+          make lint
+
+      - name: Azure login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+
+      - name: "make test"
+        run: |
+          make test

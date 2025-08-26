@@ -30,7 +30,6 @@ jobs:
     with:
       assume_role_arn: "arn:aws:iam::123456789012:role/my-assumed-role"
       region: "us-east-2"
-    secrets: inherit
 
 ```
 

@@ -99,7 +99,7 @@ jobs:
 
     - name: Report coverage
       if: ${{ inputs.report-coverage }}
-      uses: MishaKav/pytest-coverage-comment@9638e4b1448019aba40c4aaaa1ade87a9f211aa1
+      uses: MishaKav/pytest-coverage-comment@1bdbba85fb74a2fdc1ec66383acec1091610f82b
       with:
         pytest-xml-coverage-path: ./htmlcov/coverage.xml
         title: Coverage report for Python ${{ matrix.python-version }}

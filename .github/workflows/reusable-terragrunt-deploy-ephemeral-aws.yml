@@ -39,10 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df
         with:
           role-to-assume: ${{ inputs.assume_role_arn }}
           role-session-name: ${{ github.run_id }}
@@ -74,20 +74,3 @@ jobs:
           tg_version: ${{ inputs.tg_version }}
           tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
-
-      - name: Deploy
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
-        env:
-            AWS_REGION: ${{ inputs.region }}
-            INPUT_PRE_EXEC_0: |
-              sudo apt update -yqq && sudo apt install python3 -yqq
-            TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-            TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-            TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
-            GIT_BRANCH: ${{ inputs.git_branch }}
-        with:
-          tf_version: ${{ inputs.tf_version }}
-          tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

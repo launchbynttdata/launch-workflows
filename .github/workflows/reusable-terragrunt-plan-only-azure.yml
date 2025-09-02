@@ -1,4 +1,4 @@
-name: Plan Terragrunt Environment
+name: Plan Terragrunt Environment in Azure
 
 on:
   workflow_call:
@@ -17,16 +17,12 @@ on:
         required: true
         default: '0.54.11'
         type: string
-      assume_role_arn:
-          description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
-          required: true
-          type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. test) to plan'
         required: true
         type: string
       region:
-        description: 'Region within the environment (e.g. us-east-1) to plan'
+        description: 'Region within the environment (e.g. eastus2) to plan'
         required: true
         type: string
       env_id:
@@ -46,12 +42,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@00943011d9042930efac3dcd3a170e4273319bc8
+      - name: Azure Login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
-          role-to-assume: ${{ inputs.assume_role_arn }}
-          role-session-name: ${{ github.run_id }}
-          aws-region: ${{ inputs.region }}
+          client-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
 
       - name: "Set default Terraform Tags"
         id: set-tags

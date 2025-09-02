@@ -1,4 +1,4 @@
-# Plan a Terragrunt Environment
+# Plan a Terragrunt Environment in AWS
 
 Plans a single Terragrunt environment.
 

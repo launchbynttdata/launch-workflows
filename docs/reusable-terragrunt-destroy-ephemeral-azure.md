@@ -50,9 +50,9 @@ jobs:
     secrets: inherit # pragma: allowlist secret
     
     # Alternately, pass the following secrets:
-    #   TERRAFORM_CHECK_AZURE_CLIENT_ID: ${{ secrets.your_azure_client_id_secret }}
-    #   TERRAFORM_CHECK_AZURE_TENANT_ID: ${{ secrets.your_azure_tenant_id_secret }}
-    #   TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.your_azure_subscription_id_secret }}
+    #   TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID: ${{ secrets.your_azure_client_id_secret }}
+    #   TERRAGRUNT_DEPLOY_AZURE_TENANT_ID: ${{ secrets.your_azure_tenant_id_secret }}
+    #   TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID: ${{ secrets.your_azure_subscription_id_secret }}
 ```
 
 Be sure you replace `ref` with an appropriate ref to this repository. For more information on OIDC setup for Azure, see the [azure/login action documentation](https://github.com/Azure/login?tab=readme-ov-file#login-with-openid-connect-oidc-recommended).

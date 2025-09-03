@@ -38,8 +38,8 @@ on:
         required: true
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 jobs:
   plan:
@@ -78,8 +78,10 @@ jobs:
         id: plan
         uses: gruntwork-io/terragrunt-action@v3
         env:
-            INPUT_PRE_EXEC_0: |
-              sudo apt update -yqq && sudo apt install python3 -yqq; curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+            ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+            ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+            ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+            ARM_USE_OIDC: true
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}

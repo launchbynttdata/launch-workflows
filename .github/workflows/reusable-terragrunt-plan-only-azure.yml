@@ -70,7 +70,7 @@ jobs:
         run: |
             set -x
             repo=$(echo "${{ github.repository }}" | cut -d "/" -f 2)
-            echo "SYSTEM_TAGS='{\"Organization\":\"${{ github.repository_owner }}\",\"Repository\":\"$repo\",\"Branch\":\"${{ inputs.git_branch }}\",\"CommitHash\":\"${{ github.sha }}\"}'" >> "$GITHUB_OUTPUT"
+            echo "SYSTEM_TAGS={\"Organization\":\"${{ github.repository_owner }}\",\"Repository\":\"$repo\",\"Branch\":\"${{ inputs.git_branch }}\",\"CommitHash\":\"${{ github.sha }}\"}" >> "$GITHUB_OUTPUT"
 
       - name: Plan
         id: plan

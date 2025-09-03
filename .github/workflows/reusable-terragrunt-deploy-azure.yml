@@ -33,6 +33,13 @@ on:
         description: 'Instance within the region (e.g. 000) to deploy.'
         required: true
         type: string
+    secrets:
+      TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
+        required: true
+      TERRAGRUNT_DEPLOY_AZURE_TENANT_ID:
+        required: true
+      TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID:
+        required: true
 
 permissions:
   id-token: write

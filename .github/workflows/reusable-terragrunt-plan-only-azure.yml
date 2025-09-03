@@ -69,10 +69,8 @@ jobs:
         id: set-tags
         run: |
             set -x
-            echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
+            repo=$(echo "${{ github.repository }}" | cut -d "/" -f 2)
+            echo "SYSTEM_TAGS='{"Organization":"${{ github.repository_owner }}","Repository":"$repo","Branch":"${{ inputs.git_branch }}","CommitHash":"${{ github.sha }}"}'" >> "$GITHUB_OUTPUT"
 
       - name: Plan
         id: plan
@@ -82,10 +80,7 @@ jobs:
             ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
             ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
             ARM_USE_OIDC: true
-            TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-            TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-            TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+            TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
         with:
           tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan'

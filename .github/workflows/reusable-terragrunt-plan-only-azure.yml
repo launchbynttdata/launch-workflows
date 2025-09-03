@@ -15,7 +15,7 @@ on:
       tg_version:
         description: 'Version of Terragrunt to utilize'
         required: true
-        default: '0.54.11'
+        default: '0.77.22'
         type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. test) to plan'
@@ -56,6 +56,15 @@ jobs:
           tenant-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
 
+      - name: Configure Mise
+        id: configure-mise
+        run: |
+          cat <<EOF > mise.toml
+          [tools]
+          terragrunt = "${{ inputs.tg_version }}"
+          terraform = "${{ inputs.tf_version }}"
+          EOF
+
       - name: "Set default Terraform Tags"
         id: set-tags
         run: |
@@ -67,9 +76,8 @@ jobs:
 
       - name: Plan
         id: plan
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
+        uses: gruntwork-io/terragrunt-action@v3
         env:
-            AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |
               sudo apt update -yqq && sudo apt install python3 -yqq; curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
@@ -77,7 +85,5 @@ jobs:
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
             TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
         with:
-          tf_version: ${{ inputs.tf_version }}
-          tg_version: ${{ inputs.tg_version }}
           tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan'

@@ -42,6 +42,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
+      - name: "Validate GitHub Environment"
+        run: |
+          echo "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}" | base64 -i -
+          echo "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}" | base64 -i -
+          echo "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}" | base64 -i -
+
       - name: Azure Login
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:

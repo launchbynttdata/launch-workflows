@@ -35,8 +35,8 @@ on:
         type: string
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -46,12 +46,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
-
-      - name: "Validate GitHub Environment"
-        run: |
-          raised=0
-          test -z "${{ vars.DEPLOY_ROLE_ARN }}" && (echo "::error title=Repository Configuration Incomplete::This repository is missing an environment variable for DEPLOY_ROLE_ARN in the ${{ inputs.environment }} environment!"; raised=1)
-          exit $raised
 
       - name: Azure Login
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5

@@ -1,0 +1,19 @@
+[project]
+name = "launch-workflows-testing"
+version = "0.0.0"
+description = "Tests for the launch-workflows project"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gitpython>=3.1.45",
+    "pygithub>=2.7.0",
+    "pytest>=8.4.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+minversion = "8.0"
+addopts = "-ra"
+testpaths = [
+    "test"
+]

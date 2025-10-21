@@ -45,10 +45,10 @@ jobs:
       env_id: '000'
     secrets: inherit # pragma: allowlist secret
 
-    # Alternately, pass the following secrets:
-    #   TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID: ${{ secrets.your_azure_client_id_secret }}
-    #   TERRAGRUNT_DEPLOY_AZURE_TENANT_ID: ${{ secrets.your_azure_tenant_id_secret }}
-    #   TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID: ${{ secrets.your_azure_subscription_id_secret }}
+    # For usage outside the launchbynttdata organization, pass the secrets explicitly:
+    #   TERRAFORM_CHECK_AZURE_CLIENT_ID: ${{ secrets.your_azure_client_id_secret }}
+    #   TERRAFORM_CHECK_AZURE_TENANT_ID: ${{ secrets.your_azure_tenant_id_secret }}
+    #   TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.your_azure_subscription_id_secret }}
 ```
 
 If you wanted to deploy all regions and instances within a given environment -- say you had production resources that were in eastus and eastus2 -- then you can utilize GitHub's matrix functionality and our [workflow to create a matrix for Terragrunt](./reusable-github-matrix-tg.md). For more information on OIDC setup for Azure, see the [azure/login action documentation](https://github.com/Azure/login?tab=readme-ov-file#login-with-openid-connect-oidc-recommended).

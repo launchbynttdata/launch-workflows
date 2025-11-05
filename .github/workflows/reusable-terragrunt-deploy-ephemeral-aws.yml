@@ -24,6 +24,11 @@ on:
         description: 'Region within the environment (e.g. us-east-1) to deploy'
         required: true
         type: string
+      environments_root:
+        description: 'Root folder containing all environments'
+        required: false
+        default: 'platform'
+        type: string
       env_id:
         description: 'Instance within the region (e.g. 000) to deploy.'
         required: true
@@ -72,5 +77,5 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

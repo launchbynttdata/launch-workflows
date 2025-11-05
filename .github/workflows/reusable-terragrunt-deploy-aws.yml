@@ -21,6 +21,11 @@ on:
         description: 'GitHub Environment to deploy to (e.g. test, production). If not supplied, will be set from the environment input.'
         required: false
         type: string
+      environments_root:
+        description: 'Root folder containing all environments'
+        required: false
+        default: 'platform'
+        type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. test) to deploy'
         required: true
@@ -83,7 +88,7 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan -out=${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
       - name: Deploy
@@ -99,5 +104,5 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

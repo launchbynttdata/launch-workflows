@@ -17,6 +17,11 @@ on:
         required: true
         default: '0.77.22'
         type: string
+      environments_root:
+        description: 'Root folder containing all environments'
+        required: false
+        default: 'platform'
+        type: string
       environment:
         description: 'Environment (subfolder of platform, e.g. test) to deploy'
         required: true
@@ -82,7 +87,7 @@ jobs:
             ARM_USE_OIDC: true
             TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
         with:
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan -out=${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
       - name: Deploy
@@ -94,5 +99,5 @@ jobs:
             ARM_USE_OIDC: true
             TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
         with:
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

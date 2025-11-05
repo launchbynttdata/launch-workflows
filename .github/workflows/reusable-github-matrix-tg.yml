@@ -64,7 +64,7 @@ jobs:
           else:
               platform_path = Path("platform").joinpath(ENVIRONMENTS_PATH)
 
-          all_environments = discover_environments()
+          all_environments = discover_environments(platform_path)
           matrix = {"terragrunt_environment": []}
           try:
               selected_environment = list(filter(lambda x: x.name == ENVIRONMENT, all_environments))[0]

@@ -89,3 +89,36 @@ jobs:
       region: ${{ matrix.terragrunt_environment.region }}
       env_id: ${{ matrix.terragrunt_environment.instance }}
 ```
+
+### Alternate Platform Subfolder
+
+If you need to nest your environments under a subfolder of the platform/ directory, supply the `environments_path` input as demonstrated below:
+
+```
+./
+  platform/
+    terragrunt/
+      sandbox/
+        us-east-1/
+          000/
+          001/
+        us-west-1/
+          000/
+          001/
+```
+
+```yaml
+name: Your excellent workflow
+
+on:
+  pull_request: # or another event of your choosing
+
+jobs:
+  build-matrix:
+    permissions:
+      contents: read
+    uses: launchbynttdata/launch-workflows/.github/workflows/reusable-github-matrix-tg.yml@<commit hash>
+    with:
+      environments_path: terragrunt
+      platform_environment: sandbox
+```

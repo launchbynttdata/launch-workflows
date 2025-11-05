@@ -3,6 +3,11 @@ name: Build Matrix of Terragrunt Environments
 on:
   workflow_call:
     inputs:
+      environments_path:
+        description: 'Path to the environments within the platform folder (default: empty string, use the root of the platform folder)'
+        required: false
+        type: string
+        default: ''
       platform_environment:
         description: 'Environment within the platform folder to deploy (e.g. sandbox, production)'
         required: true
@@ -29,6 +34,7 @@ jobs:
         id: build-matrix
         shell: python
         env:
+          ENVIRONMENTS_PATH: ${{ inputs.environments_path }}
           PLATFORM_ENVIRONMENT: ${{ inputs.platform_environment }}
         run: |
           from pathlib import Path
@@ -51,6 +57,12 @@ jobs:
 
           if len(ENVIRONMENT) == 0:
               raise ValueError("Environment variable PLATFORM_ENVIRONMENT was empty. This variable must be supplied so that a matrix of environments can be built!")
+
+          ENVIRONMENTS_PATH = os.environ.get('ENVIRONMENTS_PATH', '')
+          if not ENVIRONMENTS_PATH:
+              platform_path = Path("platform")
+          else:
+              platform_path = Path("platform").joinpath(ENVIRONMENTS_PATH)
 
           all_environments = discover_environments()
           matrix = {"terragrunt_environment": []}

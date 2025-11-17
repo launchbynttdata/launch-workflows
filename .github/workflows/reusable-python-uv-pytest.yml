@@ -70,7 +70,7 @@ jobs:
         key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41
+      uses: astral-sh/setup-uv@5a7eac68fb9809dea845d802897dc5c723910fa3
       with:
         python-version: ${{ matrix.python-version }}
 

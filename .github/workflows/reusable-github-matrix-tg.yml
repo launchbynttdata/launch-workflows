@@ -58,7 +58,7 @@ jobs:
           if len(ENVIRONMENT) == 0:
               raise ValueError("Environment variable PLATFORM_ENVIRONMENT was empty. This variable must be supplied so that a matrix of environments can be built!")
 
-          platform_path = os.environ['ENVIRONMENTS_ROOT']
+          platform_path = Path(os.environ['ENVIRONMENTS_ROOT'])
 
           all_environments = discover_environments(platform_path)
           matrix = {"terragrunt_environment": []}

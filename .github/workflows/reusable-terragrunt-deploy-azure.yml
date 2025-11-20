@@ -23,7 +23,7 @@ on:
         default: 'platform'
         type: string
       environment:
-        description: 'Environment (subfolder of platform, e.g. test) to deploy'
+        description: 'Environment (subfolder of environments_root, e.g. test) to deploy'
         required: true
         type: string
       region:

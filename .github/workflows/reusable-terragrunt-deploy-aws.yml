@@ -38,6 +38,11 @@ on:
         description: 'Instance within the region (e.g. 000) to deploy.'
         required: true
         type: string
+      extra_setup_commands:
+        description: 'Extra setup commands to run prior to executing Terragrunt.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
     id-token: write
@@ -81,6 +86,8 @@ jobs:
             AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |
               sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -97,6 +104,8 @@ jobs:
             AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |
               sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}

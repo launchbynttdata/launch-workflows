@@ -34,6 +34,11 @@ on:
         description: 'Instance within the region (e.g. 000) to deploy.'
         required: true
         type: string
+      extra_setup_commands:
+        description: 'Extra setup commands to run prior to executing Terragrunt.'
+        required: false
+        type: string
+        default: ''
     secrets:
       TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
         required: true
@@ -81,6 +86,10 @@ jobs:
         id: plan
         uses: gruntwork-io/terragrunt-action@v3
         env:
+            INPUT_PRE_EXEC_0: |
+              sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
             ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
             ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
@@ -93,6 +102,10 @@ jobs:
       - name: Deploy
         uses: gruntwork-io/terragrunt-action@v3
         env:
+            INPUT_PRE_EXEC_0: |
+              sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
             ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
             ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}

@@ -21,8 +21,13 @@ on:
         description: 'GitHub Environment to deploy to (e.g. test, production). If not supplied, will be set from the environment input.'
         required: false
         type: string
+      environments_root:
+        description: 'Root folder containing all environments'
+        required: false
+        default: 'platform'
+        type: string
       environment:
-        description: 'Environment (subfolder of platform, e.g. test) to deploy'
+        description: 'Environment (subfolder of environments_root, e.g. test) to deploy'
         required: true
         type: string
       region:
@@ -33,6 +38,11 @@ on:
         description: 'Instance within the region (e.g. 000) to deploy.'
         required: true
         type: string
+      extra_setup_commands:
+        description: 'Extra setup commands to run prior to executing Terragrunt.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
     id-token: write
@@ -76,6 +86,8 @@ jobs:
             AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |
               sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -83,7 +95,7 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'plan -out=${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
       - name: Deploy
@@ -92,6 +104,8 @@ jobs:
             AWS_REGION: ${{ inputs.region }}
             INPUT_PRE_EXEC_0: |
               sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
             TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
             TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
             TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -99,5 +113,5 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: 'platform/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'

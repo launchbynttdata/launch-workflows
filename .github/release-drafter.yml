@@ -8,7 +8,7 @@ template: |
 
   ---
 
-  See details of [all code changes](https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION) since previous release.
+  See details of [all code changes](https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...$RESOLVED_VERSION) since previous release.
 
 categories:
   - title: ":warning: Breaking Changes"

@@ -111,7 +111,7 @@ jobs:
           cat << EOC >> pr-title-failure-comment.md
           ### ❌ Pull Request Title Validation Failed
           Your pull request title does not conform to the Conventional Commits specification.
-          Please ensure your title follows the format: `<type>(<scope>): <description>`.
+          Please ensure your title follows the format: \`<type>(<scope>): <description>\`.
           - **Type** must be one of the following: ${{ inputs.task_types }}.
           - **Scope** must be one of the following: ${{ inputs.scope_types || 'any' }}.
           - **Description** should be a brief summary of the changes.

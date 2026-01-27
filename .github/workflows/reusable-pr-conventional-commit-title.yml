@@ -45,11 +45,52 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate inputs
-        run: |
-          node -e "try { const val = JSON.parse(process.argv[1]); if (!Array.isArray(val)) throw new Error('Not an array'); } catch(e) { console.error('Input \'task_types\' is not a valid JSON array.'); process.exit(1); }" "${{ inputs.task_types }}"
-          node -e "try { const val = JSON.parse(process.argv[1]); if (!Array.isArray(val)) throw new Error('Not an array'); } catch(e) { console.error('Input \'scope_types\' is not a valid JSON array.'); process.exit(1); }" "${{ inputs.scope_types }}"
-          node -e "try { new RegExp(process.argv[1]); } catch(e) { console.error('Input \'title_regex\' is not a valid regular expression.'); process.exit(1); }" "${{ inputs.title_regex }}"
-          node -e "try { const val = JSON.parse(process.argv[1]); if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error('Not an object'); } catch(e) { console.error('Input \'custom_labels\' is not a valid JSON object.'); process.exit(1); }" "${{ inputs.custom_labels }}"
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const taskTypes = `${{ inputs.task_types }}`;
+            const scopeTypes = `${{ inputs.scope_types }}`;
+            const titleRegex = `${{ inputs.title_regex }}`;
+            const customLabels = `${{ inputs.custom_labels }}`;
+
+            // Validate task_types is a valid JSON array
+            if (taskTypes) {
+              try {
+                const val = JSON.parse(taskTypes);
+                if (!Array.isArray(val)) throw new Error('Not an array');
+              } catch(e) {
+                core.setFailed("Input 'task_types' is not a valid JSON array.");
+              }
+            }
+
+            // Validate scope_types is a valid JSON array (if provided)
+            if (scopeTypes) {
+              try {
+                const val = JSON.parse(scopeTypes);
+                if (!Array.isArray(val)) throw new Error('Not an array');
+              } catch(e) {
+                core.setFailed("Input 'scope_types' is not a valid JSON array.");
+              }
+            }
+
+            // Validate title_regex is a valid regular expression (if provided)
+            if (titleRegex) {
+              try {
+                new RegExp(titleRegex);
+              } catch(e) {
+                core.setFailed("Input 'title_regex' is not a valid regular expression.");
+              }
+            }
+
+            // Validate custom_labels is a valid JSON object (if provided)
+            if (customLabels) {
+              try {
+                const val = JSON.parse(customLabels);
+                if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error('Not an object');
+              } catch(e) {
+                core.setFailed("Input 'custom_labels' is not a valid JSON object.");
+              }
+            }
 
       - name: PR Conventional Commit Validation
         uses: ytanikin/pr-conventional-commits@1.4.0

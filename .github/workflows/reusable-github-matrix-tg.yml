@@ -3,8 +3,13 @@ name: Build Matrix of Terragrunt Environments
 on:
   workflow_call:
     inputs:
+      environments_root:
+        description: 'Path to the environments within the repository (default: platform)'
+        required: false
+        type: string
+        default: 'platform'
       platform_environment:
-        description: 'Environment within the platform folder to deploy (e.g. sandbox, production)'
+        description: 'Environment within environments_root to deploy (e.g. sandbox, production)'
         required: true
         type: string
     outputs:
@@ -29,13 +34,14 @@ jobs:
         id: build-matrix
         shell: python
         env:
+          ENVIRONMENTS_ROOT: ${{ inputs.environments_root }}
           PLATFORM_ENVIRONMENT: ${{ inputs.platform_environment }}
         run: |
           from pathlib import Path
           import os
           import json
 
-          def discover_environments(platform_path: Path = Path("platform")) -> list[Path]:
+          def discover_environments(platform_path: Path) -> list[Path]:
               return [d for d in platform_path.iterdir() if d.is_dir()]
 
           def discover_regions(environment_path: Path) -> list[Path]:
@@ -52,7 +58,9 @@ jobs:
           if len(ENVIRONMENT) == 0:
               raise ValueError("Environment variable PLATFORM_ENVIRONMENT was empty. This variable must be supplied so that a matrix of environments can be built!")
 
-          all_environments = discover_environments()
+          platform_path = Path(os.environ['ENVIRONMENTS_ROOT'])
+
+          all_environments = discover_environments(platform_path)
           matrix = {"terragrunt_environment": []}
           try:
               selected_environment = list(filter(lambda x: x.name == ENVIRONMENT, all_environments))[0]

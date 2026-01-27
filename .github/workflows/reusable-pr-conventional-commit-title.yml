@@ -3,14 +3,14 @@ on:
     inputs:
       task_types:
         type: string
-        default: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
         description: 'A JSON array of task types that are allowed. Default: ["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
         required: false
+        default: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
       scope_types:
         type: string
-        default: ""
         description: 'A JSON array of valid scope types. If omitted, any scope is allowed. If given, include the empty scope with "". Example: ["login","signup","checkout","payment", ""]'
         required: false
+        default: ""
       title_regex:
         type: string
         description: 'Regular expression for custom title validation; disabled by default. Example: ''PROJECT-\d{2,5}$'' for trailing issue ticket, ''"^[^:]+: [A-Z]"''  for capitalized title'
@@ -27,8 +27,9 @@ on:
         default: true
       custom_labels:
         type: string
-        description: 'A JSON object mapping task types to custom label names. Example: {"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
+        description: 'A JSON object mapping task types to custom label names. Default: {"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
         required: false
+        default: '{"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
       comment_on_failure:
         type: boolean
         description: "Whether to comment on the pull request if the title validation fails. Default: true"

@@ -108,7 +108,7 @@ jobs:
         id: create-failure-comment
         if: ${{ failure() && inputs.comment_on_failure }}
         run: |
-          cat << EOC >> $COMMENT
+          cat << EOC >> pr-title-failure-comment.md
           ### ❌ Pull Request Title Validation Failed
           Your pull request title does not conform to the Conventional Commits specification.
           Please ensure your title follows the format: `<type>(<scope>): <description>`.
@@ -119,14 +119,13 @@ jobs:
 
           If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details.
           EOC
-          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Comment on Failure
         if: ${{ failure() && inputs.comment_on_failure }}
         uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.create-failure-comment.outputs.comment }}
+          body-file: pr-title-failure-comment.md
           edit-mode: replace
 
       - name: Find previous failure comment

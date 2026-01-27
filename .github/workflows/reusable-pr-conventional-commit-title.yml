@@ -103,11 +103,10 @@ jobs:
           add_scope_label: ${{ inputs.add_scope_label }}
           token: ${{ github.token }}
           custom_labels: ${{ inputs.custom_labels }}
-        continue-on-error: true
 
       - name: Create failure comment based on inputs
         id: create-failure-comment
-        if: steps.pr-validation.outcome == 'failure' && inputs.comment_on_failure == 'true'
+        if: ${{ failure() && inputs.comment_on_failure }}
         run: |
           COMMENT=""
           COMMENT+="### ❌ Pull Request Title Validation Failed\n"
@@ -123,7 +122,7 @@ jobs:
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Comment on Failure
-        if: steps.pr-validation.outcome == 'failure' && inputs.comment_on_failure == 'true'
+        if: ${{ steps.pr-validation.outcome == 'failure' && inputs.comment_on_failure }}
         uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -132,7 +131,7 @@ jobs:
 
       - name: Find previous failure comment
         id: find-comment
-        if: steps.pr-validation.outcome == 'success' && inputs.comment_on_failure == 'true'
+        if: ${{ steps.pr-validation.outcome == 'success' && inputs.comment_on_failure }}
         uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -140,7 +139,7 @@ jobs:
           body-includes: "Pull Request Title Validation Failed"
 
       - name: Cleanup Failure Comment on Success
-        if: steps.pr-validation.outcome == 'success' && steps.find-comment.outcome == 'success' && inputs.comment_on_failure == 'true'
+        if: ${{ steps.pr-validation.outcome == 'success' && steps.find-comment.outcome == 'success' && inputs.comment_on_failure }}
         run: |
           if [ "${{ steps.find-comment.outputs.comment-found }}" == "true" ]; then
             gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent

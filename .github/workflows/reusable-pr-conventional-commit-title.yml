@@ -104,7 +104,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X PUT repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels -f labels='[]'
+          echo '{"labels":[]}' | gh api -X PUT repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels --input -
 
       - name: PR Conventional Commit Validation
         id: pr-validation

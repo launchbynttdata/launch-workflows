@@ -108,21 +108,21 @@ jobs:
         id: create-failure-comment
         if: ${{ failure() && inputs.comment_on_failure }}
         run: |
-          COMMENT=""
-          COMMENT+="### ❌ Pull Request Title Validation Failed\n"
-          COMMENT+="Your pull request title does not conform to the Conventional Commits specification.\n"
-          COMMENT+="Please ensure your title follows the format: `<type>(<scope>): <description>`.\n"
-          COMMENT+="- **Type** must be one of the following: ${{ inputs.task_types }}."
-          COMMENT+="- **Scope** must be one of the following: ${{ inputs.scope_types || 'any' }}."
-          COMMENT+="- **Description** should be a brief summary of the changes.\n"
-          if [ -n "${{ inputs.title_regex }}" ]; then
-            COMMENT+="- Additionally, your description must match the custom regex: `${{ inputs.title_regex }}`.\n"
-          fi
-          COMMENT+="\nIf you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details."
+          cat << EOC >> $COMMENT
+          ### ❌ Pull Request Title Validation Failed
+          Your pull request title does not conform to the Conventional Commits specification.
+          Please ensure your title follows the format: `<type>(<scope>): <description>`.
+          - **Type** must be one of the following: ${{ inputs.task_types }}.
+          - **Scope** must be one of the following: ${{ inputs.scope_types || 'any' }}.
+          - **Description** should be a brief summary of the changes.
+          ${{ inputs.title_regex && format('- Additionally, your description must match the custom regex: `{0}`.', inputs.title_regex) || '' }}
+
+          If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details.
+          EOC
           echo "comment=$COMMENT" >> $GITHUB_OUTPUT
 
       - name: Comment on Failure
-        if: ${{ steps.pr-validation.outcome == 'failure' && inputs.comment_on_failure }}
+        if: ${{ failure() && inputs.comment_on_failure }}
         uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -131,7 +131,7 @@ jobs:
 
       - name: Find previous failure comment
         id: find-comment
-        if: ${{ steps.pr-validation.outcome == 'success' && inputs.comment_on_failure }}
+        if: ${{ success() && inputs.comment_on_failure }}
         uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
@@ -139,7 +139,7 @@ jobs:
           body-includes: "Pull Request Title Validation Failed"
 
       - name: Cleanup Failure Comment on Success
-        if: ${{ steps.pr-validation.outcome == 'success' && steps.find-comment.outcome == 'success' && inputs.comment_on_failure }}
+        if: ${{ success() && steps.find-comment.outcome == 'success' && inputs.comment_on_failure }}
         run: |
           if [ "${{ steps.find-comment.outputs.comment-found }}" == "true" ]; then
             gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent

@@ -139,6 +139,8 @@ jobs:
 
       - name: Cleanup Failure Comment on Success
         if: ${{ success() && steps.find-comment.outcome == 'success' && inputs.comment_on_failure }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ steps.find-comment.outputs.comment-id }}" != "" ]; then
             gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent

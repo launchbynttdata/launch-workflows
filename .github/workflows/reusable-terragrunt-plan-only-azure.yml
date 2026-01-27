@@ -1,0 +1,100 @@
+name: Plan Terragrunt Environment in Azure
+
+on:
+  workflow_call:
+    inputs:
+      git_branch:
+        description: 'Branch triggering this plan'
+        required: true
+        type: string
+      tf_version:
+          description: 'Version of Terraform to utilize'
+          required: true
+          default: '1.5.5'
+          type: string
+      tg_version:
+        description: 'Version of Terragrunt to utilize'
+        required: true
+        default: '0.77.22'
+        type: string
+      environments_root:
+        description: 'Root folder containing all environments'
+        required: false
+        default: 'platform'
+        type: string
+      environment:
+        description: 'Environment (subfolder of environments_root, e.g. test) to plan'
+        required: true
+        type: string
+      region:
+        description: 'Region within the environment (e.g. eastus2) to plan'
+        required: true
+        type: string
+      env_id:
+        description: 'Instance within the region (e.g. 000) to plan'
+        required: true
+        type: string
+      extra_setup_commands:
+        description: 'Extra setup commands to run prior to executing Terragrunt.'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
+        required: true
+      TERRAGRUNT_DEPLOY_AZURE_TENANT_ID:
+        required: true
+      TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  plan:
+    name: "Plan ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - name: Azure Login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure Mise
+        id: configure-mise
+        run: |
+          cat <<EOF > mise.toml
+          [tools]
+          terragrunt = "${{ inputs.tg_version }}"
+          terraform = "${{ inputs.tf_version }}"
+          EOF
+
+      - name: "Set default Terraform Tags"
+        id: set-tags
+        run: |
+            set -x
+            repo=$(echo "${{ github.repository }}" | cut -d "/" -f 2)
+            echo "SYSTEM_TAGS={\"Organization\":\"${{ github.repository_owner }}\",\"Repository\":\"$repo\",\"Branch\":\"${{ inputs.git_branch }}\",\"CommitHash\":\"${{ github.sha }}\"}" >> "$GITHUB_OUTPUT"
+
+      - name: Plan
+        id: plan
+        uses: gruntwork-io/terragrunt-action@v3
+        env:
+            INPUT_PRE_EXEC_0: |
+              sudo apt update -yqq && sudo apt install python3 -yqq
+            INPUT_PRE_EXEC_1: |
+              ${{ inputs.extra_setup_commands }}
+            ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+            ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+            ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+            ARM_USE_OIDC: true
+            TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
+        with:
+          tg_dir: '${{inputs.environments_root}}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'plan'

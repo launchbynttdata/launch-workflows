@@ -1,6 +1,6 @@
-# Destroy an Ephemeral Terragrunt Environment
+# Destroy an Ephemeral Terragrunt Environment to AWS
 
-This workflow Destroys a single ephemeral Terragrunt environment; it is the counterpart to [reusable-terragrunt-deploy-ephemeral](./reusable-terragrunt-deploy-ephemeral.md) workflow which creates the environment for you.
+This workflow Destroys a single ephemeral Terragrunt environment; it is the counterpart to [reusable-terragrunt-deploy-ephemeral-aws](./reusable-terragrunt-deploy-ephemera-aws.md) workflow which creates the environment for you.
 
 Unlike the persistent Terragrunt deployment workflow, this workflow does not require a GitHub Environment to exist, you must pass a role ARN which will be assumed prior to invoking any Terragrunt commands.
 

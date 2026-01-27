@@ -129,6 +129,7 @@ jobs:
           - **Type** must be one of the following: ${{ inputs.task_types }}
           ${{ inputs.scope_types && format('- **Scope** must be one of the following: {0}', inputs.scope_types) || '- **Scope** is optional and can be any value or omitted entirely.' }}
           - **Description** should be a brief summary of the changes.
+          - If you have a breaking change, ensure the exclamation mark (\`!\`) is placed immediately after the type or scope, e.g., \`feat!: ...\` or \`feat(scope)!: ...\`.
           ${{ inputs.title_regex && format('- Additionally, your description must match the custom regex: `{0}`.\n', inputs.title_regex) || '' }}
           If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details.
           EOC

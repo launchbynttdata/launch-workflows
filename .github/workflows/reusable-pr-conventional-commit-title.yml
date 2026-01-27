@@ -102,6 +102,7 @@ jobs:
           add_scope_label: ${{ inputs.add_scope_label }}
           token: ${{ github.token }}
           custom_labels: ${{ inputs.custom_labels }}
+        continue-on-error: true
 
       - name: Create failure comment based on inputs
         id: create-failure-comment

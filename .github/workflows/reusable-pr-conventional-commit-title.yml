@@ -93,7 +93,7 @@ jobs:
             }
 
       - name: PR Conventional Commit Validation
-        uses: ytanikin/pr-conventional-commits@1.4.0
+        uses: ytanikin/pr-conventional-commits@1.5.1
         with:
           task_types: ${{ inputs.task_types }}
           scope_types: ${{ inputs.scope_types }}

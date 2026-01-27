@@ -100,7 +100,7 @@ jobs:
 
       - name: Clear labels
         id: clear-labels
-        if: ${{ inputs.clear_labels_when_run }}
+        if: ${{ inputs.clear_labels }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --remove-label $(gh pr view ${{ github.event.pull_request.number }} --json labels --template '{{range .labels}}{{.name}} {{end}}')
 

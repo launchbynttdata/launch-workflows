@@ -56,4 +56,4 @@ Be sure you replace `ref` with an appropriate ref to this repository.
 
 By doing so, you should see the `Required` indicator on your pull request's checks section, as shown below:
 
-![Pull request with a required status check showing a passing state](docs/images/all-required-checks-passed.png)
+![Pull request with a required status check showing a passing state](/docs/images/all-required-checks-passed.png)

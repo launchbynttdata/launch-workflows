@@ -48,7 +48,7 @@ permissions:
 
 jobs:
   validate-title:
-    name: Validate Pull Request Title
+    name: Validate PR Title
     runs-on: ubuntu-latest
     steps:
       - name: Validate inputs

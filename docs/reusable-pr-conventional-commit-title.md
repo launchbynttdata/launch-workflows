@@ -30,6 +30,8 @@ There are two additional configurations that are not passed to the underlying wo
 To validate your PR titles using our default configuration, add the following workflow to your repository:
 
 ```yaml
+name: Validate PR Title
+
 on:
   pull_request:
     types: [opened, reopened, edited]
@@ -44,3 +46,6 @@ jobs:
 ```
 
 Be sure you replace `ref` with an appropriate ref to this repository.
+
+> [!NOTE]
+> By default, your repository may not require this workflow to succeed before a change is merged. 

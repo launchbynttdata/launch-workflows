@@ -1,0 +1,104 @@
+on:
+  workflow_call:
+    inputs:
+      task_types:
+        type: string
+        default: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
+        description: 'A JSON array of task types that are allowed. Default: ["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
+        required: true
+      scope_types:
+        type: string
+        default: ""
+        description: 'A JSON array of valid scope types. If omitted, any scope is allowed. If given, include the empty scope with "". Example: ["login","signup","checkout","payment", ""]'
+        required: false
+      title_regex:
+        type: string
+        description: 'Regular expression for custom title validation; disabled by default. Example: ''PROJECT-\d{2,5}$'' for trailing issue ticket, ''"^[^:]+: [A-Z]"''  for capitalized title'
+        required: false
+      add_label:
+        type: boolean
+        description: "Whether to add labels to your pull request. Default: true"
+        required: false
+        default: true
+      add_scope_label:
+        type: boolean
+        description: 'Whether to add labels to your pull request. Example: the ''login'' scope will be added for this PR title: "fix(login): fix message in login page". Default: true'
+        required: false
+        default: true
+      custom_labels:
+        type: string
+        description: 'A JSON object mapping task types to custom label names. Example: {"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
+        required: false
+      comment_on_failure:
+        type: boolean
+        description: "Whether to comment on the pull request if the title validation fails. Default: true"
+        required: false
+        default: true
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  validate-title:
+    name: Validate Pull Request Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        run: |
+          node -e "try { const val = JSON.parse(process.argv[1]); if (!Array.isArray(val)) throw new Error('Not an array'); } catch(e) { console.error('Input \'task_types\' is not a valid JSON array.'); process.exit(1); }" "${{ inputs.task_types }}"
+          node -e "try { const val = JSON.parse(process.argv[1]); if (!Array.isArray(val)) throw new Error('Not an array'); } catch(e) { console.error('Input \'scope_types\' is not a valid JSON array.'); process.exit(1); }" "${{ inputs.scope_types }}"
+          node -e "try { new RegExp(process.argv[1]); } catch(e) { console.error('Input \'title_regex\' is not a valid regular expression.'); process.exit(1); }" "${{ inputs.title_regex }}"
+          node -e "try { const val = JSON.parse(process.argv[1]); if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error('Not an object'); } catch(e) { console.error('Input \'custom_labels\' is not a valid JSON object.'); process.exit(1); }" "${{ inputs.custom_labels }}"
+
+      - name: PR Conventional Commit Validation
+        uses: ytanikin/pr-conventional-commits@1.4.0
+        with:
+          task_types: ${{ inputs.task_types }}
+          scope_types: ${{ inputs.scope_types }}
+          title_regex: ${{ inputs.title_regex }}
+          add_label: ${{ inputs.add_label }}
+          add_scope_label: ${{ inputs.add_scope_label }}
+          token: ${{ github.token }}
+          custom_labels: ${{ inputs.custom_labels }}
+
+      - name: Create failure comment based on inputs
+        id: create-failure-comment
+        if: failure() && inputs.comment_on_failure == 'true'
+        run: |
+          COMMENT=""
+          COMMENT+="### ❌ Pull Request Title Validation Failed\n"
+          COMMENT+="Your pull request title does not conform to the Conventional Commits specification.\n"
+          COMMENT+="Please ensure your title follows the format: `<type>(<scope>): <description>`.\n"
+          COMMENT+="- **Type** must be one of the following: ${{ inputs.task_types }}."
+          COMMENT+="- **Scope** must be one of the following: ${{ inputs.scope_types || 'any' }}."
+          COMMENT+="- **Description** should be a brief summary of the changes.\n"
+          if [ -n "${{ inputs.title_regex }}" ]; then
+            COMMENT+="- Additionally, your description must match the custom regex: `${{ inputs.title_regex }}`.\n"
+          fi
+          COMMENT+="\nIf you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details."
+          echo "comment=$COMMENT" >> $GITHUB_OUTPUT
+
+      - name: Comment on Failure
+        if: failure() && inputs.comment_on_failure == 'true'
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.create-failure-comment.outputs.comment }}
+          edit-mode: replace
+
+      - name: Find previous failure comment
+        id: find-comment
+        if: success() && inputs.comment_on_failure == 'true'
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "Pull Request Title Validation Failed"
+
+      - name: Cleanup Failure Comment on Success
+        if: success() && inputs.comment_on_failure == 'true'
+        run: |
+          if [ "${{ steps.find-comment.outputs.comment-found }}" == "true" ]; then
+            gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent
+          fi

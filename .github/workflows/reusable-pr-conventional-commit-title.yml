@@ -35,6 +35,11 @@ on:
         description: "Whether to comment on the pull request if the title validation fails. Default: true"
         required: false
         default: true
+      clear_labels:
+        type: boolean
+        description: "Whether to clear existing labels when the workflow is run. This helps clean up scope labels added by this action when the scope changes. Default: true"
+        required: false
+        default: true
 
 permissions:
   pull-requests: write
@@ -92,6 +97,12 @@ jobs:
                 core.setFailed("Input 'custom_labels' is not a valid JSON object.");
               }
             }
+
+      - name: Clear labels
+        id: clear-labels
+        if: ${{ inputs.clear_labels_when_run }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --remove-label $(gh pr view ${{ github.event.pull_request.number }} --json labels --template '{{range .labels}}{{.name}} {{end}}')
 
       - name: PR Conventional Commit Validation
         id: pr-validation

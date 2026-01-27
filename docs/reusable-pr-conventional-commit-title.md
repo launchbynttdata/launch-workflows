@@ -47,5 +47,13 @@ jobs:
 
 Be sure you replace `ref` with an appropriate ref to this repository.
 
-> [!NOTE]
-> By default, your repository may not require this workflow to succeed before a change is merged. 
+> [!CAUTION]
+> By default, your repository likely does not require this workflow to succeed before a change is merged. By making this workflow required, you ensure that a successful run must be achieved prior to merge, which ensures your commit messages are consistent!
+> 
+> To make this workflow required, visit your repository's settings and create a new Ruleset with a required status check, as shown below:
+
+![Required status check in the GitHub settings page](images/required-status-check.png)
+
+By doing so, you should see the `Required` indicator on your pull request's checks section, as shown below:
+
+![Pull request with a required status check showing a passing state](images/required-status-check.png)

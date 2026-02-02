@@ -27,7 +27,7 @@ jobs:
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
-      - uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb
+      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         id: cache
@@ -49,7 +49,7 @@ jobs:
           export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
           make configure
 
-      - uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb
+      - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         id: save-cache
         name: Cache asdf tools

@@ -39,6 +39,10 @@ on:
         required: false
         type: string
         default: ''
+    outputs:
+      terraform_outputs:
+        description: 'JSON string containing all Terraform outputs from the deployment (base64 encoded)'
+        value: ${{ jobs.deploy.outputs.terraform_outputs }}
     secrets:
       TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
         required: true
@@ -55,6 +59,8 @@ jobs:
   deploy:
     name: "Plan & Deploy ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
+    outputs:
+      terraform_outputs: ${{ steps.set-outputs.outputs.terraform_outputs }}
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -69,11 +75,11 @@ jobs:
       - name: Configure Mise
         id: configure-mise
         run: |
-          cat <<EOF > mise.toml
+          cat <<MISE_EOF > mise.toml
           [tools]
           terragrunt = "${{ inputs.tg_version }}"
           terraform = "${{ inputs.tf_version }}"
-          EOF
+          MISE_EOF
 
       - name: "Set default Terraform Tags"
         id: set-tags
@@ -114,3 +120,21 @@ jobs:
         with:
           tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+
+      - name: Get Terraform Outputs
+        id: set-outputs
+        uses: gruntwork-io/terragrunt-action@v3
+        env:
+            ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+            ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+            ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+            ARM_USE_OIDC: true
+            TG_DIR: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+            INPUT_POST_EXEC_0: |
+              cd "$TG_DIR"
+              TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
+              ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
+              echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
+        with:
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'output -json'

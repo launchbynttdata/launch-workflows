@@ -75,11 +75,11 @@ jobs:
       - name: Configure Mise
         id: configure-mise
         run: |
-          cat <<MISE_EOF > mise.toml
+          cat <<EOF > mise.toml
           [tools]
           terragrunt = "${{ inputs.tg_version }}"
           terraform = "${{ inputs.tf_version }}"
-          MISE_EOF
+          EOF
 
       - name: "Set default Terraform Tags"
         id: set-tags

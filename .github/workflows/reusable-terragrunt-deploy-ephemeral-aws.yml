@@ -3,49 +3,74 @@ on:
   workflow_call:
     inputs:
       git_branch:
-        description: 'Branch triggering this deploy.'
+        description: "Branch triggering this deploy."
         required: true
         type: string
       tf_version:
-          description: 'Version of Terraform to utilize'
-          required: true
-          default: '1.5.5'
-          type: string
-      tg_version:
-        description: 'Version of Terragrunt to utilize'
+        description: "Version of Terraform to utilize"
         required: true
-        default: '0.54.11'
+        default: "1.5.5"
+        type: string
+      tg_version:
+        description: "Version of Terragrunt to utilize"
+        required: true
+        default: "0.54.11"
         type: string
       assume_role_arn:
-        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+        description: "ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so."
         required: true
         type: string
       region:
-        description: 'Region within the environment (e.g. us-east-1) to deploy'
+        description: "Region within the environment (e.g. us-east-1) to deploy"
         required: true
         type: string
       environments_root:
-        description: 'Root folder containing all environments'
+        description: "Root folder containing all environments"
         required: false
-        default: 'platform'
+        default: "platform"
         type: string
       env_id:
-        description: 'Instance within the region (e.g. 000) to deploy.'
+        description: "Instance within the region (e.g. 000) to deploy."
         required: true
         type: string
-      extra_setup_commands:
-        description: 'Extra setup commands to run prior to executing Terragrunt.'
+      before_plan_commands:
+        description: "Commands to run prior to executing Terragrunt plan."
         required: false
         type: string
         default: ''
+      before_deploy_commands:
+        description: "Commands to run prior to executing Terragrunt apply."
+        required: false
+        type: string
+        default: ""
+      before_shared_commands:
+        description: "Commands to run prior to both Terragrunt plan and apply. These are applied after before_plan_commands and before_deploy_commands."
+        required: false
+        type: string
+        default: ""
+      after_plan_commands:
+        description: "Commands to run after executing Terragrunt plan."
+        required: false
+        type: string
+        default: ""
+      after_deploy_commands:
+        description: "Commands to run after executing Terragrunt apply."
+        required: false
+        type: string
+        default: ""
+      after_shared_commands:
+        description: "Commands to run after both Terragrunt plan and apply. These are applied after after_plan_commands and after_deploy_commands."
+        required: false
+        type: string
+        default: ""
     outputs:
       terraform_outputs:
         description: 'JSON string containing all Terraform outputs from the deployment (base64 encoded)'
         value: ${{ jobs.deploy.outputs.terraform_outputs }}
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -67,46 +92,58 @@ jobs:
       - name: "Set default Terraform Tags"
         id: set-tags
         run: |
-            set -x
-            echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-            echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
+          set -x
+          echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
       - name: Plan
         id: plan
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
-            AWS_REGION: ${{ inputs.region }}
-            INPUT_PRE_EXEC_0: |
-              sudo apt update -yqq && sudo apt install python3 -yqq
-            INPUT_PRE_EXEC_1: |
-              ${{ inputs.extra_setup_commands }}
-            TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-            TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-            TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
-            GIT_BRANCH: ${{ inputs.git_branch }}
+          AWS_REGION: ${{ inputs.region }}
+          INPUT_PRE_EXEC_0: |
+            sudo apt update -yqq && sudo apt install python3 -yqq
+          INPUT_PRE_EXEC_1: |
+            ${{ inputs.before_plan_commands }}
+          INPUT_PRE_EXEC_2: |
+            ${{ inputs.before_shared_commands }}
+          INPUT_POST_EXEC_0: |
+            ${{ inputs.after_plan_commands }}
+          INPUT_POST_EXEC_1: |
+            ${{ inputs.after_shared_commands }}
+          TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
+          TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
+          TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+          TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+          GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_command: "plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Deploy
         id: deploy
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
-            AWS_REGION: ${{ inputs.region }}
-            INPUT_PRE_EXEC_0: |
-              sudo apt update -yqq && sudo apt install python3 -yqq
-            INPUT_PRE_EXEC_1: |
-              ${{ inputs.extra_setup_commands }}
-            TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-            TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-            TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-            TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
-            GIT_BRANCH: ${{ inputs.git_branch }}
+          AWS_REGION: ${{ inputs.region }}
+          INPUT_PRE_EXEC_0: |
+            sudo apt update -yqq && sudo apt install python3 -yqq
+          INPUT_PRE_EXEC_1: |
+            ${{ inputs.before_deploy_commands }}
+          INPUT_PRE_EXEC_2: |
+            ${{ inputs.before_shared_commands }}
+          INPUT_POST_EXEC_0: |
+            ${{ inputs.after_deploy_commands }}
+          INPUT_POST_EXEC_1: |
+            ${{ inputs.after_shared_commands }}
+          TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
+          TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
+          TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
+          TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+          GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}

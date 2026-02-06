@@ -50,7 +50,7 @@ jobs:
     - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
     - name: Restore cached asdf tools
-      uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb
+      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
       if: ${{ inputs.asdf-install }}
       id: cache
       with:
@@ -62,7 +62,7 @@ jobs:
       uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47 
 
     - name: Cache asdf tools
-      uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb
+      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
       id: save-cache
       if: ${{ inputs.asdf-install && steps.cache.outputs.cache-hit != 'true' }}
       with:
@@ -70,7 +70,7 @@ jobs:
         key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: astral-sh/setup-uv@681c641aba71e4a1c380be3ab5e12ad51f415867
+      uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41
       with:
         python-version: ${{ matrix.python-version }}
 

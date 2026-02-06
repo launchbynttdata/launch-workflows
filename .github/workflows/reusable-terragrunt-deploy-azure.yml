@@ -131,7 +131,7 @@ jobs:
             ARM_USE_OIDC: true
             TG_DIR: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
             INPUT_POST_EXEC_0: |
-              cd "$TG_DIR"
+              cd "$GITHUB_WORKSPACE/$TG_DIR"
               TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
               ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
               echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"

@@ -63,7 +63,11 @@ on:
         description: "Commands to run after both Terragrunt plan and apply. These are applied after after_plan_commands and after_deploy_commands."
         required: false
         type: string
-        default: ""
+        default: ''
+    outputs:
+      terraform_outputs:
+        description: 'JSON string containing all Terraform outputs from the deployment (base64 encoded)'
+        value: ${{ jobs.deploy.outputs.terraform_outputs }}
     secrets:
       TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
         required: true
@@ -80,6 +84,8 @@ jobs:
   deploy:
     name: "Plan & Deploy ${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
+    outputs:
+      terraform_outputs: ${{ steps.set-outputs.outputs.terraform_outputs }}
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -149,5 +155,24 @@ jobs:
           ARM_USE_OIDC: true
           TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
         with:
-          tg_dir: "${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
-          tg_command: "apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
+          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+
+      - name: Get Terraform Outputs
+        id: set-outputs
+        working-directory: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+        env:
+          ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          echo "=== Getting Terraform outputs ==="
+          TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
+          echo "Raw outputs:"
+          echo "$TF_OUTPUTS" | jq '.'
+          
+          # Base64 encode for safe transfer
+          ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
+          echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
+          echo "=== Outputs captured and encoded ==="

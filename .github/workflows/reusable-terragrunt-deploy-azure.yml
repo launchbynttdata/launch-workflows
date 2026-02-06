@@ -123,18 +123,19 @@ jobs:
 
       - name: Get Terraform Outputs
         id: set-outputs
-        uses: gruntwork-io/terragrunt-action@v3
+        working-directory: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
         env:
-            ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
-            ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
-            ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
-            ARM_USE_OIDC: true
-            TG_DIR: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
-            INPUT_POST_EXEC_0: |
-              cd "$GITHUB_WORKSPACE/$TG_DIR"
-              TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
-              ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
-              echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
-        with:
-          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'output -json'
+          ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true
+        run: |
+          echo "=== Getting Terraform outputs ==="
+          TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
+          echo "Raw outputs:"
+          echo "$TF_OUTPUTS" | jq '.'
+          
+          # Base64 encode for safe transfer
+          ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
+          echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
+          echo "=== Outputs captured and encoded ==="

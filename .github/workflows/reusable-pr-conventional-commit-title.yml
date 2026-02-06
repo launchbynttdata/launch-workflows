@@ -1,0 +1,164 @@
+on:
+  workflow_call:
+    inputs:
+      task_types:
+        type: string
+        description: 'A JSON array of task types that are allowed. Default: ["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
+        required: false
+        default: '["feat","fix","docs","test","ci","refactor","perf","chore","revert"]'
+      scope_types:
+        type: string
+        description: 'A JSON array of valid scope types. If omitted, any scope is allowed. If given, include the empty scope with "". Example: ["login","signup","checkout","payment", ""]'
+        required: false
+        default: ""
+      title_regex:
+        type: string
+        description: 'Regular expression for custom title validation; disabled by default. Example: ''PROJECT-\d{2,5}$'' for trailing issue ticket, ''"^[^:]+: [A-Z]"''  for capitalized title'
+        required: false
+        default: ""
+      add_label:
+        type: boolean
+        description: "Whether to add labels to your pull request. Default: true"
+        required: false
+        default: true
+      add_scope_label:
+        type: boolean
+        description: 'Whether to add labels to your pull request. Example: the ''login'' scope will be added for this PR title: "fix(login): fix message in login page". Default: true'
+        required: false
+        default: true
+      custom_labels:
+        type: string
+        description: 'A JSON object mapping task types to custom label names. Default: {"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
+        required: false
+        default: '{"feat": "feature", "fix": "fix", "docs": "documentation", "test": "test", "ci": "CI/CD", "refactor": "refactor", "perf": "performance", "chore": "chore", "revert": "revert", "wip": "WIP"}'
+      comment_on_failure:
+        type: boolean
+        description: "Whether to comment on the pull request if the title validation fails. Default: true"
+        required: false
+        default: true
+      clear_labels:
+        type: boolean
+        description: "Whether to clear existing labels when the workflow is run. This helps clean up scope labels added by this action when the scope changes. Default: true"
+        required: false
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const taskTypes = `${{ inputs.task_types }}`;
+            const scopeTypes = `${{ inputs.scope_types }}`;
+            const titleRegex = `${{ inputs.title_regex }}`;
+            const customLabels = `${{ inputs.custom_labels }}`;
+
+            // Validate task_types is a valid JSON array
+            if (taskTypes) {
+              try {
+                const val = JSON.parse(taskTypes);
+                if (!Array.isArray(val)) throw new Error('Not an array');
+              } catch(e) {
+                core.setFailed("Input 'task_types' is not a valid JSON array.");
+              }
+            }
+
+            // Validate scope_types is a valid JSON array (if provided)
+            if (scopeTypes) {
+              try {
+                const val = JSON.parse(scopeTypes);
+                if (!Array.isArray(val)) throw new Error('Not an array');
+              } catch(e) {
+                core.setFailed("Input 'scope_types' is not a valid JSON array.");
+              }
+            }
+
+            // Validate title_regex is a valid regular expression (if provided)
+            if (titleRegex) {
+              try {
+                new RegExp(titleRegex);
+              } catch(e) {
+                core.setFailed("Input 'title_regex' is not a valid regular expression.");
+              }
+            }
+
+            // Validate custom_labels is a valid JSON object (if provided)
+            if (customLabels) {
+              try {
+                const val = JSON.parse(customLabels);
+                if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error('Not an object');
+              } catch(e) {
+                core.setFailed("Input 'custom_labels' is not a valid JSON object.");
+              }
+            }
+
+      - name: Clear labels
+        id: clear-labels
+        if: ${{ inputs.clear_labels }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo '{"labels":[]}' | gh api -X PUT repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels --input -
+
+      - name: PR Conventional Commit Validation
+        id: pr-validation
+        uses: ytanikin/pr-conventional-commits@1.5.1
+        with:
+          task_types: ${{ inputs.task_types }}
+          scope_types: ${{ inputs.scope_types }}
+          title_regex: ${{ inputs.title_regex }}
+          add_label: ${{ inputs.add_label }}
+          add_scope_label: ${{ inputs.add_scope_label }}
+          token: ${{ github.token }}
+          custom_labels: ${{ inputs.custom_labels }}
+
+      - name: Create failure comment based on inputs
+        id: create-failure-comment
+        if: ${{ failure() && inputs.comment_on_failure }}
+        run: |
+          cat << EOC >> pr-title-failure-comment.md
+          ### ❌ Pull Request Title Validation Failed
+          Your pull request title (\`${{ github.event.pull_request.title }}\`) does not conform to the Conventional Commits specification.
+
+          Please ensure your title follows the format: \`<type>(<scope>): <description>\`.
+          - **Type** must be one of the following: ${{ inputs.task_types }}
+          ${{ inputs.scope_types && format('- **Scope** must be one of the following: {0}', inputs.scope_types) || '- **Scope** is optional and can be any value or omitted entirely.' }}
+          - **Description** should be a brief summary of the changes.
+          - If you have a breaking change, ensure the exclamation mark (\`!\`) is placed immediately after the type or scope, e.g., \`feat!: ...\` or \`feat(scope)!: ...\`.
+          ${{ inputs.title_regex && format('- Additionally, your description must match the custom regex: `{0}`.\n', inputs.title_regex) || '' }}
+          If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details.
+          EOC
+
+      - name: Find previous failure comment
+        id: find-comment
+        if: ${{ always() && inputs.comment_on_failure }}
+        uses: peter-evans/find-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "Pull Request Title Validation Failed"
+
+      - name: Comment on Failure
+        if: ${{ failure() && steps.pr-validation.outcome == 'failure' && inputs.comment_on_failure }}
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          body-file: pr-title-failure-comment.md
+          edit-mode: replace
+
+      - name: Cleanup Failure Comment on Success
+        if: ${{ success() && steps.find-comment.outcome == 'success' && inputs.comment_on_failure }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.find-comment.outputs.comment-id }}" != "" ]; then
+            gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent
+          fi

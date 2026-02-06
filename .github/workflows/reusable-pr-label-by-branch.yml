@@ -65,7 +65,7 @@ jobs:
           fi
           
           rm first-time-comment.md
-      - uses: release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5
+      - uses: release-drafter/release-drafter@6db134d15f3909ccc9eefd369f02bd1e9cffdf97
         if: steps.prerequisite-check.outputs.auto_label == 'true'
         id: autolabel
         with:

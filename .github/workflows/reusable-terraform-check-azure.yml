@@ -1,17 +1,14 @@
-name: Check AWS Terraform Code
+name: Check Azure Terraform Code
 
 on:
   workflow_call:
-    inputs:
-      assume_role_arn:
-        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+    secrets:
+      TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
         required: true
-        type: string
-      region:
-        description: 'Region within the environment (e.g. us-east-1) to deploy'
-        default: 'us-east-2'
+      TERRAGRUNT_DEPLOY_AZURE_TENANT_ID:
         required: true
-        type: string
+      TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID:
+        required: true
 
 permissions:
   id-token: write
@@ -19,11 +16,11 @@ permissions:
 
 jobs:
   check:
-    name: "Check AWS Terraform Code"
+    name: "Check Azure Terraform Code"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
 
       - name: Setup asdf
         # We use the 'setup' variant of this action, because we have some custom behavior in 
@@ -49,7 +46,7 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          export AWS_REGION=${{ inputs.region }}
+          export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
           make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
@@ -65,26 +62,12 @@ jobs:
         run: |
           make lint
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708
+      - name: Azure login
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
-          role-to-assume: ${{ inputs.assume_role_arn }}
-          role-session-name: ${{ github.run_id }}
-          aws-region: ${{ inputs.region }}
-
-      - name: "Create AWS Profile"
-        # Works around the interactions of aws-actions/configure-aws-credentials with 4.x.x AWS TF provider.
-        # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
-        # to remove line setting the profile in our examples, or we see failures to initialize the provider.
-        run: |
-          set -x
-          mkdir -p ~/.aws
-          echo "[default]" > ~/.aws/credentials
-          echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
-          echo "aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" >> ~/.aws/credentials
-          # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
-          find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
+          client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
 
       - name: "make test"
         run: |

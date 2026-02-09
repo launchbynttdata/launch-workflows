@@ -1,6 +1,6 @@
-# Deploy an Ephemeral Terragrunt Environment
+# Deploy an Ephemeral Terragrunt Environment to AWS
 
-Plans and deploys a single Terragrunt environment in an ephemeral manner; you are expected to use the [reusable-terragrunt-destroy-ephemeral](./reusable-terragrunt-destroy-ephemeral.md) workflow to remove the environment when you are done with it. In order to avoid naming conflicts with ephemeral environments, care must be taken in the Terraform module that Terragrunt references to ensure resources are named in a unique manner.
+Plans and deploys a single Terragrunt environment in an ephemeral manner; you are expected to use the [reusable-terragrunt-destroy-ephemeral-aws](./reusable-terragrunt-destroy-ephemeral-aws.md) workflow to remove the environment when you are done with it. In order to avoid naming conflicts with ephemeral environments, care must be taken in the Terraform module that Terragrunt references to ensure resources are named in a unique manner.
 
 This workflow operates only on the `sandbox` environment folder. Unlike the persistent Terragrunt deployment workflow, this workflow does not require a GitHub Environment to exist, you must pass a role ARN which will be assumed prior to invoking any Terragrunt commands.
 

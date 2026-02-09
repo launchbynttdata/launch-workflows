@@ -15,7 +15,7 @@ from src.launch_github import get_github_instance
 
 @pytest.fixture(scope="session")
 def test_organization_name():
-    yield "chris-testing-org"
+    yield os.environ.get("TESTING_ORGANIZATION_NAME", "nttdtest")
 
 
 @pytest.fixture(scope="session")

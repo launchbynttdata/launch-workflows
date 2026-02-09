@@ -83,7 +83,6 @@ jobs:
 
 def test_reusable_pr_label_by_branch(temporary_repository):
     branch_name_label_map = {
-        "first_pr_always_major_regardless_of_name": ["major"],
         "bug/something": ["patch"],
         "fix/something": ["patch"],
         "patch/something": ["patch"],

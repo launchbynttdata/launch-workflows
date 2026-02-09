@@ -347,7 +347,7 @@ def test_reusable_release_draft_repo_without_exising_release(
         ("patch!/major", "1.0.0"),
     ],
 )
-def test_reusable_release_draft_repo_with_exising_release(
+def test_reusable_release_draft_repo_with_existing_release(
     temporary_repository, branch_name, expected_tag
 ):
     """
@@ -560,7 +560,7 @@ def test_reusable_release_draft_existing_repo_with_prs_and_tags(
                 if release_run.conclusion != WorkflowRunConclusion.SUCCESS:
                     logs = get_workflow_run_logs(release_run, drop_log_timestamps=True)
                     raise AssertionError(
-                        f"Release workflow run did not succeed as expected: {label_run.conclusion}\nLogs:\n{logs}"
+                        f"Release workflow run did not succeed as expected: {release_run.conclusion}\nLogs:\n{logs}"
                     )
 
         release = [release for release in temporary_repository.get_releases()][0]
@@ -578,4 +578,4 @@ def test_reusable_release_draft_existing_repo_with_prs_and_tags(
         expected_tag_names = ["1.0.0", "1.0.1", update_to_tag]
         found_tag_names = [tag.name for tag in temporary_repository.get_tags()]
 
-        assert all(tag in found_tag_names for tag in expected_tag_names) or breakpoint()
+        assert all(tag in found_tag_names for tag in expected_tag_names)

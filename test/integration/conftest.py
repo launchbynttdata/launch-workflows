@@ -33,7 +33,7 @@ def organization(
 @pytest.fixture(scope="function")
 def repo_name() -> Generator[str, None, None]:
     suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
-    return f"test-repo-{suffix}"
+    yield f"test-repo-{suffix}"
 
 
 @pytest.fixture(scope="function")
@@ -87,11 +87,5 @@ def temporary_repository(
             f"Repository {repo_name} not found on GitHub after {max_tries} attempts!"
         )
 
-    local_repo = Repo.clone_from(
-        f"https://github.com/{test_organization_name}/{repo_name}.git",
-        tmp_path.joinpath(repo_name),
-    )
-
-    yield github_repo, local_repo
-
+    yield github_repo
     github_repo.delete()

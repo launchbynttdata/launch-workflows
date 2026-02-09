@@ -2,12 +2,15 @@ import logging
 import os
 import tempfile
 import zipfile
+from contextlib import contextmanager
 from enum import StrEnum
 from pathlib import Path
-from time import sleep
+from time import sleep, time
+from typing import Generator
 
 import requests
-from github import Auth, Consts, Github
+from github import Auth, Consts, Github, GithubException
+from github.Branch import Branch
 from github.Repository import Repository
 from github.Workflow import Workflow
 from github.WorkflowRun import WorkflowRun
@@ -84,7 +87,6 @@ def wait_for_workflow_run_completion(
         ):
             return status
         sleep(1)
-    breakpoint()
     raise TimeoutError("Workflow run did not complete within the timeout period.")
 
 
@@ -119,3 +121,135 @@ def get_workflow_run_logs(
             contents = "\n".join([line[29:] for line in contents.splitlines()])
 
     return contents
+
+
+def populate_file(
+    repository: Repository,
+    path: str,
+    content: str,
+    branch: str = "main",
+    commit_message: str | None = None,
+    skip_ci: bool = False,
+):
+    """
+    Populate a file in the repository.
+    """
+    commit_message = f"Add {path}" if commit_message is None else commit_message
+    commit_message = f"{commit_message} [skip ci]" if skip_ci else commit_message
+    repository.create_file(
+        path=path,
+        message=commit_message,
+        content=content,
+        branch=branch,
+    )
+
+
+@contextmanager
+def workflow_run_created(
+    workflow: Workflow, branch: str, timeout: int = 60
+) -> Generator[WorkflowRun, None, None]:
+    """
+    Context manager to wait for a workflow run to be created.
+    """
+    run = None
+    found = False
+    start_time = time()
+    while time() - start_time < timeout and not found:
+        try:
+            workflow_runs = list(workflow.get_runs(branch=branch))
+            if workflow_runs:
+                logger.debug(f"Workflow run found for branch '{branch}'.")
+                found = True
+                run = workflow_runs[0]
+            else:
+                sleep(1)
+        except GithubException as ghe:
+            logger.error(f"Error while checking for workflow runs: {ghe}")
+    if found:
+        yield run
+    else:
+        raise TimeoutError(
+            f"Workflow run did not appear for branch '{branch}' within the timeout period."
+        )
+
+
+@contextmanager
+def workflow_run_completed(
+    workflow_run: WorkflowRun, timeout: int = 120
+) -> Generator[WorkflowRunStatus, None, None]:
+    """
+    Context manager to wait for a workflow run to complete.
+    """
+    status = None
+    found = False
+    start_time = time()
+    while time() - start_time < timeout and not found:
+        workflow_run.update()
+        if workflow_run.status in (
+            WorkflowRunStatus.COMPLETED,
+            WorkflowRunStatus.FAILED,
+        ):
+            found = True
+            status = workflow_run.status
+        else:
+            sleep(1)
+    if found:
+        yield status
+    else:
+        raise TimeoutError("Workflow run did not complete within the timeout period.")
+
+
+@contextmanager
+def branch_created(
+    github_repo: Repository,
+    branch_name: str,
+    origin_branch: str | None = None,
+    timeout: int = 60,
+) -> Generator[Branch, None, None]:
+    """
+    Context manager to create a branch and wait for it to be usable.
+    """
+    start_time = time()
+    if origin_branch is None:
+        # We're creating main, which has to have a file in it, so create a README.md
+        populate_file(
+            repository=github_repo,
+            path="README.md",
+            content=f"# README for {github_repo.name}\n\nThis is the main branch.",
+        )
+    else:
+        # Create the branch from the specified origin branch
+        origin_found = False
+        while not origin_found and time() - start_time < timeout:
+            try:
+                origin_branch = github_repo.get_branch(origin_branch)
+                origin_found = True
+            except GithubException as ghe:
+                if ghe.status == 404:
+                    sleep(1)
+                else:
+                    raise ghe
+        if not origin_found:
+            raise TimeoutError(
+                f"Origin branch '{origin_branch}' not found in repository '{github_repo.name}'."
+            )
+
+        github_repo.create_git_ref(
+            f"refs/heads/{branch_name}", origin_branch.commit.sha
+        )
+    found = False
+    while time() - start_time < timeout and not found:
+        try:
+            branch = github_repo.get_branch(branch_name)
+            found = True
+        except GithubException as ghe:
+            if ghe.status == 404:
+                continue
+            else:
+                raise ghe
+    if found:
+        yield branch
+    else:
+        raise TimeoutError(
+            f"Branch '{branch_name}' did not appear within the timeout period."
+        )

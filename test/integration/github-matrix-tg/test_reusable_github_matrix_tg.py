@@ -1,22 +1,19 @@
 import os
-from time import sleep
 
 from github.Repository import Repository
 
 from src.launch_github import (
     WorkflowRunConclusion,
     WorkflowRunStatus,
+    branch_created,
     get_workflow_run_logs,
-    populate_readme_file,
-    wait_for_workflow_run_completion,
-    wait_for_workflow_run_create,
+    populate_file,
+    workflow_run_completed,
+    workflow_run_created,
 )
 
 LAUNCH_WORKFLOWS_REF_TO_TEST = os.environ.get("LAUNCH_WORKFLOWS_REF_TO_TEST", "main")
-
-
-def populate_workflow_file(repository: Repository):
-    content = f"""
+WORKFLOW_FILE_CONTENTS = f"""
 name: GitHub Matrix Workflow
 
 on:
@@ -30,12 +27,6 @@ jobs:
     with:
       platform_environment: sandbox
 """
-    repository.create_file(
-        ".github/workflows/github_matrix.yml",
-        content=content,
-        branch="main",
-        message="Add workflow file for reusable GitHub matrix",
-    )
 
 
 def populate_platform_folder(
@@ -45,11 +36,12 @@ def populate_platform_folder(
     instance: str,
     branch: str = "main",
 ):
-    repository.create_file(
+    populate_file(
+        repository=repository,
         path=f"platform/{environment}/{region}/{instance}/test.txt",
-        message=f"Add test environment file for {environment} in {region}/{instance}",
         content="Test Environment File",
         branch=branch,
+        commit_message=f"Add test environment file for {environment} in {region}/{instance}",
     )
 
 
@@ -57,92 +49,110 @@ def test_reusable_github_matrix_tg(temporary_repository):
     """
     Test the reusable GitHub matrix template with a temporary repository.
     """
-    github_repo, _ = temporary_repository
-
-    assert github_repo.name.startswith("test-repo-")
-    assert github_repo.private is False
-    assert github_repo.visibility == "public"
-
-    populate_workflow_file(repository=github_repo)
-
-    github_repo.create_git_ref(
-        "refs/heads/test/matrix-happy-path", github_repo.get_branch("main").commit.sha
-    )
-    sleep(1)
-    populate_readme_file(github_repo, branch="test/matrix-happy-path")
-    populate_platform_folder(
-        repository=github_repo,
-        environment="sandbox",
-        region="us-east-1",
-        instance="000",
-        branch="test/matrix-happy-path",
-    )
-
-    github_repo.create_git_ref(
-        "refs/heads/test/matrix-missing-platform-folder",
-        github_repo.get_branch("main").commit.sha,
-    )
-    sleep(1)
-    populate_readme_file(github_repo, branch="test/matrix-missing-platform-folder")
-
-    github_repo.create_pull(
-        base="main",
-        head="test/matrix-happy-path",
-        title="Test Reusable GitHub Matrix Template - Happy Path",
-        body="This is a test pull request to validate the reusable GitHub matrix template with a happy path scenario.",
-    )
-    github_repo.create_pull(
-        base="main",
-        head="test/matrix-missing-platform-folder",
-        title="Test Reusable GitHub Matrix Template - Missing Platform Folder",
-        body="This is a test pull request to validate the reusable GitHub matrix template with a missing platform folder. A failure is expected.",
-    )
-
-    workflow = github_repo.get_workflow(id_or_file_name="github_matrix.yml")
-
-    run_happy_path = wait_for_workflow_run_create(
-        workflow, branch="test/matrix-happy-path"
-    )
-    status_happy_path = wait_for_workflow_run_completion(run_happy_path)
-    if status_happy_path != WorkflowRunStatus.COMPLETED:
-        raise AssertionError(
-            f"Workflow run for happy path did not complete successfully: {status_happy_path}"
+    with branch_created(temporary_repository, "main") as main:
+        populate_file(
+            repository=temporary_repository,
+            path=".github/workflows/github_matrix.yml",
+            content=WORKFLOW_FILE_CONTENTS,
+            branch=main.name,
+            commit_message="Add reusable GitHub matrix workflow file",
         )
-    if run_happy_path.conclusion != WorkflowRunConclusion.SUCCESS:
-        raise AssertionError(
-            f"Workflow run for happy path did not succeed as expected: {run_happy_path.conclusion}"
+        with branch_created(
+            temporary_repository, "test/matrix-happy-path", origin_branch=main.name
+        ) as pr_branch:
+            populate_platform_folder(
+                repository=temporary_repository,
+                environment="sandbox",
+                region="us-east-1",
+                instance="000",
+                branch=pr_branch.name,
+            )
+
+        temporary_repository.create_pull(
+            base=main.name,
+            head=pr_branch.name,
+            title="Test Reusable GitHub Matrix Template",
+            body="This is a test pull request to validate the reusable GitHub matrix template with a happy path scenario.",
         )
 
-    run_missing_platform_folder = wait_for_workflow_run_create(
-        workflow, branch="test/matrix-missing-platform-folder"
-    )
-    status_missing_platform_folder = wait_for_workflow_run_completion(
-        run_missing_platform_folder
-    )
-    if status_missing_platform_folder != WorkflowRunStatus.COMPLETED:
-        raise AssertionError(
-            f"Workflow run for missing platform folder did not complete as expected: {status_missing_platform_folder}"
-        )
-    if run_missing_platform_folder.conclusion != WorkflowRunConclusion.FAILURE:
-        raise AssertionError(
-            f"Workflow run for missing platform folder did not fail as expected: {run_missing_platform_folder.conclusion}"
+        workflow = temporary_repository.get_workflow(
+            id_or_file_name="github_matrix.yml"
         )
 
-    logs_happy_path = get_workflow_run_logs(run_happy_path, drop_log_timestamps=True)
-    logs_missing_platform_folder = get_workflow_run_logs(run_missing_platform_folder)
+        with workflow_run_created(workflow, branch=pr_branch.name) as run:
+            with workflow_run_completed(run) as status:
+                if status != WorkflowRunStatus.COMPLETED:
+                    raise AssertionError(
+                        f"Workflow run for happy path did not complete successfully: {status}"
+                    )
+                if run.conclusion != WorkflowRunConclusion.SUCCESS:
+                    logs = get_workflow_run_logs(run, drop_log_timestamps=True)
+                    raise AssertionError(
+                        f"Workflow run for happy path did not succeed as expected: {run.conclusion}\nLogs:\n{logs}"
+                    )
+                run_logs = get_workflow_run_logs(run, drop_log_timestamps=True)
+                expected_lines = [
+                    "Generated the following environment matrix:",
+                    "{",
+                    '    "terragrunt_environment": [',
+                    "        {",
+                    '            "environment": "sandbox",',
+                    '            "region": "us-east-1",',
+                    '            "instance": "000"',
+                    "        }",
+                    "    ]",
+                    "}",
+                ]
+                assert all(line in run_logs for line in expected_lines)
 
-    happy_path_expected_lines = [
-        "Generated the following environment matrix:",
-        "{",
-        '    "terragrunt_environment": [',
-        "        {",
-        '            "environment": "sandbox",',
-        '            "region": "us-east-1",',
-        '            "instance": "000"',
-        "        }",
-        "    ]",
-        "}",
-    ]
 
-    assert all(line in logs_happy_path for line in happy_path_expected_lines)
-    assert "FileNotFoundError" in logs_missing_platform_folder
+def test_reusable_github_matrix_tg_no_platform_folder(temporary_repository):
+    """
+    Test the reusable GitHub matrix template with a temporary repository that has no platform folder.
+    """
+
+    with branch_created(temporary_repository, "main") as main:
+        populate_file(
+            repository=temporary_repository,
+            path=".github/workflows/github_matrix.yml",
+            content=WORKFLOW_FILE_CONTENTS,
+            branch=main.name,
+            commit_message="Add reusable GitHub matrix workflow file",
+        )
+        with branch_created(
+            temporary_repository,
+            "test/matrix-no-platform-folder",
+            origin_branch=main.name,
+        ) as pr_branch:
+            populate_file(
+                repository=temporary_repository,
+                path="test.txt",
+                content="Nothing to see here.",
+                branch=pr_branch.name,
+            )
+
+        temporary_repository.create_pull(
+            base=main.name,
+            head=pr_branch.name,
+            title="Test Reusable GitHub Matrix Template - No Platform Folder",
+            body="This is a test pull request to validate the reusable GitHub matrix template with no platform folder. A failure is expected.",
+        )
+
+        workflow = temporary_repository.get_workflow(
+            id_or_file_name="github_matrix.yml"
+        )
+
+        with workflow_run_created(workflow, branch=pr_branch.name, timeout=180) as run:
+            with workflow_run_completed(run) as status:
+                if status != WorkflowRunStatus.COMPLETED:
+                    raise AssertionError(
+                        f"Workflow run for no platform folder did not complete as expected: {status}"
+                    )
+
+                if run.conclusion != WorkflowRunConclusion.FAILURE:
+                    raise AssertionError(
+                        f"Workflow run for no platform folder did not fail as expected: {run.conclusion}"
+                    )
+
+            run_logs = get_workflow_run_logs(run, drop_log_timestamps=True)
+            assert "FileNotFoundError" in run_logs

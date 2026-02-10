@@ -141,6 +141,7 @@ jobs:
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_99: |
             echo "=== Getting Terraform outputs ==="
+            which terragrunt || echo "TERRAGRUNT NOT FOUND!"
             TF_OUTPUTS=$(terragrunt --terragrunt-working-dir "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}" output -json 2>/dev/null || echo '{}')
             echo "Raw outputs:"
             echo "$TF_OUTPUTS" | jq '.'

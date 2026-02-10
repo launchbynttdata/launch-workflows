@@ -77,7 +77,7 @@ jobs:
     name: "Plan & Deploy ephemeral/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
     outputs:
-      terraform_outputs: ${{ steps.set-outputs.outputs.terraform_outputs }}
+      terraform_outputs: ${{ steps.encode-outputs.outputs.terraform_outputs }}
     steps:
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
@@ -151,15 +151,10 @@ jobs:
           tg_command: "apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Gather Outputs
-        id: set-outputs
+        id: get-outputs
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
           AWS_REGION: ${{ inputs.region }}
-          INPUT_POST_EXEC_1: |
-            pwd
-            ls -al /github/workspace/
-            find . -type f -name "outputs.json" -exec cat {} \;
-            # echo "terraform_outputs=$(cat /github/workspace/outputs.json | base64 -w 0)" >> "$GITHUB_OUTPUT"
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -170,4 +165,9 @@ jobs:
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
           tg_command: |
-            output -json >> outputs.json
+            output -json
+
+      - name: Encode Outputs
+        id: encode-outputs
+        run: |
+          echo "terraform_outputs=$(echo '${{ steps.get-outputs.outputs.tg_action_output }}' | base64)" >> "$GITHUB_OUTPUT"

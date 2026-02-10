@@ -37,7 +37,7 @@ on:
         description: "Commands to run prior to executing Terragrunt plan."
         required: false
         type: string
-        default: ''
+        default: ""
       before_deploy_commands:
         description: "Commands to run prior to executing Terragrunt apply."
         required: false
@@ -65,7 +65,7 @@ on:
         default: ""
     outputs:
       terraform_outputs:
-        description: 'JSON string containing all Terraform outputs from the deployment (base64 encoded)'
+        description: "JSON string containing all Terraform outputs from the deployment (base64 encoded)"
         value: ${{ jobs.deploy.outputs.terraform_outputs }}
 
 permissions:
@@ -147,20 +147,21 @@ jobs:
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_command: "apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Get Terraform Outputs
         id: set-outputs
-        working-directory: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+        working-directory: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
         env:
           AWS_REGION: ${{ inputs.region }}
         run: |
           echo "=== Getting Terraform outputs ==="
+          terragrunt output -json 2>/dev/null
           TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
           echo "Raw outputs:"
           echo "$TF_OUTPUTS" | jq '.'
-          
+
           # Base64 encode for safe transfer
           ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
           echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"

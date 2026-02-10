@@ -173,11 +173,9 @@ jobs:
       - name: Encode Outputs
         id: encode-outputs
         run: |
-          echo '${{ steps.get-outputs.outputs.tg_action_output }}'
           RAW_OUTPUT=$(echo '${{ steps.get-outputs.outputs.tg_action_output }}')
-          echo "$RAW_OUTPUT"
-          CLEANED_OUTPUT=$(echo "$RAW_OUTPUT" | sed 's|%0A|\n|g' | sed 's|%3C|<|g' | sed 's|%3E|>|g')
-          echo "$CLEANED_OUTPUT"
+          # Replace escaped newlines, angle brackets. Parse with JQ to exclude sensitive items and confirm the JSON is valid.
+          CLEANED_OUTPUT=$(echo "$RAW_OUTPUT" | sed 's|%0A|\n|g' | sed 's|%3C|<|g' | sed 's|%3E|>|g' | jq -r 'with_entries(select(.value.sensitive == false))')
           ENCODED_OUTPUT=$(echo -n "$CLEANED_OUTPUT" | base64 -w 0)
-          echo $ENCODED_OUTPUT
+          echo "$ENCODED_OUTPUT"
           echo "terraform_outputs=$ENCODED_OUTPUT" >> "$GITHUB_OUTPUT"

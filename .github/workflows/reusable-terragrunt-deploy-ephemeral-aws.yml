@@ -83,7 +83,8 @@ jobs:
     name: "Plan & Deploy ephemeral/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
     outputs:
-      terragrunt_all: ${{ steps.deploy.outputs.tg_action_output }}
+      terragrunt_plan_output: ${{ steps.plan.outputs.tg_action_output }}
+      terragrunt_deploy_output: ${{ steps.deploy.outputs.tg_action_output }}
       terraform_outputs_json: ${{ steps.deploy.outputs.terraform_outputs_json }}
     steps:
       - name: Checkout
@@ -154,11 +155,15 @@ jobs:
           INPUT_POST_EXEC_1: |
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_99: |
+            set -x
             ORIGINAL_PATH=$(pwd)
             cd $GITHUB_WORKSPACE/${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}
-            terragrunt  output -json | jq -r 'with_entries(select(.value.sensitive == false))' > outputs.json
+            pwd
+            terragrunt output -json
+            terragrunt output -json | jq -r 'with_entries(select(.value.sensitive == false))' > outputs.json
             echo "terraform_outputs_json=$(base64 -w 0 outputs.json)" >> "$GITHUB_OUTPUT"
             cd $ORIGINAL_PATH
+            set +x
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}

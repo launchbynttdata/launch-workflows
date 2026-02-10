@@ -155,15 +155,10 @@ jobs:
           INPUT_POST_EXEC_1: |
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_99: |
-            set -x
-            ORIGINAL_PATH=$(pwd)
-            cd $GITHUB_WORKSPACE/${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}
-            pwd
-            terragrunt output -json
+            # Current path is the value of tg_dir provided to the action, so we can just run terragrunt output.
             terragrunt output -json | jq -r 'with_entries(select(.value.sensitive == false))' > outputs.json
-            echo "terraform_outputs_json=$(base64 -w 0 outputs.json)" >> "$GITHUB_OUTPUT"
-            cd $ORIGINAL_PATH
-            set +x
+            base64 -w 0 outputs.json > outputs.json.b64
+            echo "terraform_outputs_json=$(cat outputs.json.b64)" >> "${GITHUB_OUTPUT}"
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -174,33 +169,3 @@ jobs:
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
           tg_command: "apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
-
-      # - name: Gather Outputs
-      #   id: get-outputs
-      #   uses: gruntwork-io/terragrunt-action@v3.1.0
-      #   env:
-      #     AWS_REGION: ${{ inputs.region }}
-      #     TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
-      #     TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
-      #     TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
-      #     TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
-      #     INPUT_PRE_EXEC_1: |
-      #       unset TF_INPUT
-      #       export TG_NON_INTERACTIVE=true
-      #     GIT_BRANCH: ${{ inputs.git_branch }}
-      #   with:
-      #     tf_path: "terraform"
-      #     tg_version: ${{ inputs.tg_version }}
-      #     tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
-      #     tg_command: |
-      #       output -json
-
-      # - name: Encode Outputs
-      #   id: encode-outputs
-      #   run: |
-      #     RAW_OUTPUT=$(echo '${{ steps.get-outputs.outputs.tg_action_output }}')
-      #     # Replace escaped newlines, angle brackets. Parse with JQ to exclude sensitive items and confirm the JSON is valid.
-      #     CLEANED_OUTPUT=$(echo "$RAW_OUTPUT" | sed 's|%0A|\n|g' | sed 's|%3C|<|g' | sed 's|%3E|>|g' | jq -r 'with_entries(select(.value.sensitive == false))')
-      #     ENCODED_OUTPUT=$(echo -n "$CLEANED_OUTPUT" | base64 -w 0)
-      #     echo "$ENCODED_OUTPUT"
-      #     echo "terraform_outputs=$ENCODED_OUTPUT" >> "$GITHUB_OUTPUT"

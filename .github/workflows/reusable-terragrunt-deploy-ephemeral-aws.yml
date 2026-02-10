@@ -173,4 +173,6 @@ jobs:
       - name: Encode Outputs
         id: encode-outputs
         run: |
-          echo "terraform_outputs=$(echo '${{ steps.get-outputs.outputs.tg_action_output }}' | base64)" >> "$GITHUB_OUTPUT"
+          ENCODED_OUTPUT=$(echo "${{ steps.get-outputs.outputs.tg_command_output }}" | sed 's|%0A|\n|g' | base64 -w 0)
+          echo "terraform_outputs=$ENCODED_OUTPUT" >> "$GITHUB_OUTPUT"
+          echo $ENCODED_OUTPUT

@@ -64,12 +64,6 @@ on:
         type: string
         default: ""
     outputs:
-      terragrunt_plan_output:
-        description: "String containing all Terragrunt output from the plan step"
-        value: ${{ jobs.deploy.outputs.terragrunt_plan_output}}
-      terragrunt_deploy_output:
-        description: "String containing all Terragrunt output from the deployment step"
-        value: ${{ jobs.deploy.outputs.terragrunt_deploy_output }}
       terraform_outputs:
         description: "JSON string containing all Terraform outputs from the deployment (base64 encoded)"
         value: ${{ jobs.deploy.outputs.terraform_outputs_json }}
@@ -83,8 +77,6 @@ jobs:
     name: "Plan & Deploy ephemeral/${{ inputs.region }}/${{ inputs.env_id }}"
     runs-on: ubuntu-latest
     outputs:
-      terragrunt_plan_output: ${{ steps.plan.outputs.tg_action_output }}
-      terragrunt_deploy_output: ${{ steps.deploy.outputs.tg_action_output }}
       terraform_outputs_json: ${{ steps.deploy.outputs.terraform_outputs_json }}
     steps:
       - name: Checkout

@@ -160,10 +160,14 @@ jobs:
       - name: Capture Terraform Outputs
         id: capture-output
         working-directory: ${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}
+        env:
+          AWS_REGION: ${{ inputs.region }}
         run: |
+          # Ensure mise/terragrunt is available
+          eval "$(mise activate bash)"
+
           t=$(mktemp -d)
-          # Allow only non-sensitive outputs to be included.
-          terragrunt output -json | jq -r 'with_entries(select(.value.sensitive == false))' > $t/outputs.json
+          terragrunt output -json --terragrunt-non-interactive | jq -r 'with_entries(select(.value.sensitive == false))' > $t/outputs.json
           # Base64 encode the outputs to ensure they can be passed as a string in the GitHub Actions output without issues related to special characters, newlines, etc.
           base64 -w 0 $t/outputs.json > $t/outputs.json.b64
           echo "terraform_outputs_json=$(cat $t/outputs.json.b64)" >> "${GITHUB_OUTPUT}"

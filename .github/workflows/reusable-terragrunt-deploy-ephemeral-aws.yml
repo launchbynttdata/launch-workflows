@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       terragrunt_all: ${{ steps.deploy.outputs.tg_action_output }}
-      terraform_outputs_json: ${{ steps.encode-outputs.outputs.terraform_outputs }}
+      terraform_outputs_json: ${{ steps.deploy.outputs.terraform_outputs_json }}
     steps:
       - name: Checkout
         uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709

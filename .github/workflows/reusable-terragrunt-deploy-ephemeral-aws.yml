@@ -159,6 +159,7 @@ jobs:
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
           TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
+          TG_NON_INTERACTIVE: "true"
           GIT_BRANCH: ${{ inputs.git_branch }}
         with:
           tf_version: ${{ inputs.tf_version }}

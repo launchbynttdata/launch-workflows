@@ -159,7 +159,7 @@ jobs:
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
           tg_command: "apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
-      
+
       - name: Gather Outputs
         id: set-outputs
         uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
@@ -188,4 +188,5 @@ jobs:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
-          tg_command: "output -json 2>/dev/null || echo '{}' >> outputs.json; echo "terraform_outputs=$(jq -r '.' outputs.json | base64 -w 0)" >> "$GITHUB_OUTPUT"
+          tg_command: |
+            output -json 2>/dev/null || echo '{}' >> outputs.json; echo "terraform_outputs=$(jq -r '.' outputs.json | base64 -w 0)" >> "$GITHUB_OUTPUT"

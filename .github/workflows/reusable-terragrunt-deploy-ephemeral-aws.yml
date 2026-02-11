@@ -168,6 +168,7 @@ jobs:
           pwd
           ls -al .
           t=$(mktemp -d)
+          terragrunt init
           terragrunt output -json --non-interactive | jq -r 'with_entries(select(.value.sensitive == false))' > $t/outputs.json
           # Base64 encode the outputs to ensure they can be passed as a string in the GitHub Actions output without issues related to special characters, newlines, etc.
           base64 -w 0 $t/outputs.json > $t/outputs.json.b64

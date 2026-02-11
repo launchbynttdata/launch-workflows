@@ -146,6 +146,12 @@ jobs:
             ${{ inputs.after_deploy_commands }}
           INPUT_POST_EXEC_1: |
             ${{ inputs.after_shared_commands }}
+          INPUT_POST_EXEC_99: |
+            # Current path is the value of tg_dir provided to the action, so we can just run terragrunt output into a temporary path for intermediate files.
+            # Allow only non-sensitive outputs to be included.
+            terragrunt output -json | jq -r 'with_entries(select(.value.sensitive == false))' > /tmp/outputs.json
+            # Base64 encode the outputs to ensure they can be passed as a string in the GitHub Actions output without issues related to special characters, newlines, etc.
+            base64 -w 0 /tmp/outputs.json > /tmp/outputs.json.b64
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -160,18 +166,7 @@ jobs:
       - name: Capture Terraform Outputs
         id: capture-output
         working-directory: ${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}
-        env:
-          AWS_REGION: ${{ inputs.region }}
         run: |
-          # Ensure mise/terraform is available
-          eval "$(mise activate bash)"
-          cd .terragrunt-cache
-          # Two levels deep inside .terragrunt-cache
-          cd $(ls -d */ | head -n 1)
-          cd $(ls -d */ | head -n 1)
-          terraform init -migrate-state
-          t=$(mktemp -d)
-          terraform output -json | jq -r 'with_entries(select(.value.sensitive == false))' > $t/outputs.json
-          # Base64 encode the outputs to ensure they can be passed as a string in the GitHub Actions output without issues related to special characters, newlines, etc.
-          base64 -w 0 $t/outputs.json > $t/outputs.json.b64
-          echo "terraform_outputs_json=$(cat $t/outputs.json.b64)" >> "${GITHUB_OUTPUT}"
+          ls -al /tmp
+          cat /tmp/outputs.json.b64
+          echo "terraform_outputs_json=$(cat /tmp/outputs.json.b64)" >> "${GITHUB_OUTPUT}"

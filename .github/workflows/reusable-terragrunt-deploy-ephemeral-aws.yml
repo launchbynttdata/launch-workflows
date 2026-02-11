@@ -157,7 +157,7 @@ jobs:
           AWS_REGION: ${{ inputs.region }}
         run: |
           echo "=== Getting Terraform outputs ==="
-          TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
+          TF_OUTPUTS=$(terragrunt output -json 2>/dev/null | jq 'with_entries(select(.value.sensitive != true))' || echo '{}')
           echo "Raw outputs:"
           echo "$TF_OUTPUTS" | jq '.'
           

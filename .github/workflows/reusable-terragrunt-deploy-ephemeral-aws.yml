@@ -167,6 +167,4 @@ jobs:
         id: capture-output
         working-directory: ${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}
         run: |
-          ls -al /tmp
-          cat /tmp/outputs.json.b64
           echo "terraform_outputs_json=$(cat /tmp/outputs.json.b64)" >> "${GITHUB_OUTPUT}"

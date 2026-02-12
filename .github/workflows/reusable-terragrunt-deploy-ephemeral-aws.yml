@@ -156,6 +156,11 @@ jobs:
         env:
           AWS_REGION: ${{ inputs.region }}
         run: |
+          # Install terraform
+          wget -q "https://releases.hashicorp.com/terraform/${{ inputs.tf_version }}/terraform_${{ inputs.tf_version }}_linux_amd64.zip"
+          unzip -q terraform_${{ inputs.tf_version }}_linux_amd64.zip
+          sudo mv terraform /usr/local/bin/
+          
           # Install terragrunt
           wget -q "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
           chmod +x terragrunt_linux_amd64

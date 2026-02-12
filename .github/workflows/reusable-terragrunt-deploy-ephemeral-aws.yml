@@ -141,18 +141,13 @@ jobs:
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_2: |
             echo "=== Getting Terraform outputs ==="
-            echo "Working directory: $(pwd)"
-            
-            # Suppress terragrunt warnings by using TG_NON_INTERACTIVE
-            export TG_NON_INTERACTIVE=true
             
             if terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1; then
               echo "terragrunt output succeeded"
-              cat /tmp/tf-outputs-raw.json
-              jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json 2>&1 || echo '{}' > /tmp/tf-outputs-filtered.json
+              # Filter out terragrunt warning lines (timestamps and WARN/ERROR/INFO lines) before parsing JSON
+              grep -v "^[0-9][0-9]:[0-9][0-9]:" /tmp/tf-outputs-raw.json | jq 'with_entries(select(.value.sensitive != true))' > /tmp/tf-outputs-filtered.json 2>&1 || echo '{}' > /tmp/tf-outputs-filtered.json
             else
-              echo "terragrunt output failed:"
-              cat /tmp/tf-outputs-raw.json
+              echo "terragrunt output failed"
               echo '{}' > /tmp/tf-outputs-filtered.json
             fi
             

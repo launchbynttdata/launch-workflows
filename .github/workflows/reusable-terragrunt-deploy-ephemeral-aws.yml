@@ -140,19 +140,9 @@ jobs:
           INPUT_POST_EXEC_1: |
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_2: |
-            echo "=== Getting Terraform outputs ==="
-            
-            if terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1; then
-              echo "terragrunt output succeeded"
-              # Filter out terragrunt warning lines (timestamps and WARN/ERROR/INFO lines) before parsing JSON
-              grep -v "^[0-9][0-9]:[0-9][0-9]:" /tmp/tf-outputs-raw.json | jq 'with_entries(select(.value.sensitive != true))' > /tmp/tf-outputs-filtered.json 2>&1 || echo '{}' > /tmp/tf-outputs-filtered.json
-            else
-              echo "terragrunt output failed"
-              echo '{}' > /tmp/tf-outputs-filtered.json
-            fi
-            
-            echo "Filtered outputs:"
-            cat /tmp/tf-outputs-filtered.json
+            echo "=== Capturing Terraform outputs ==="
+            terragrunt output -json 2>&1 | grep -v "^[0-9][0-9]:[0-9][0-9]:" | jq 'with_entries(select(.value.sensitive != true))' > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
+            echo "Outputs captured"
             base64 -w 0 /tmp/tf-outputs-filtered.json > /tmp/tf-outputs-encoded.txt
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}

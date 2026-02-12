@@ -141,7 +141,9 @@ jobs:
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_2: |
             echo "=== Capturing Terraform outputs ==="
-            terragrunt output -json 2>&1 | grep -v "^[0-9][0-9]:[0-9][0-9]:" | jq 'with_entries(select(.value.sensitive != true))' > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
+            terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1
+            echo "Raw output saved, filtering..."
+            grep -v "^[0-9][0-9]:[0-9][0-9]:" /tmp/tf-outputs-raw.json | jq 'with_entries(select(.value.sensitive != true))' > /tmp/tf-outputs-filtered.json 2>/dev/null || echo '{}' > /tmp/tf-outputs-filtered.json
             echo "Outputs captured"
             base64 -w 0 /tmp/tf-outputs-filtered.json > /tmp/tf-outputs-encoded.txt
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}

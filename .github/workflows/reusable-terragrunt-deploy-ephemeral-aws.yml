@@ -141,8 +141,19 @@ jobs:
             ${{ inputs.after_shared_commands }}
           INPUT_POST_EXEC_2: |
             echo "=== Getting Terraform outputs ==="
-            terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1 || echo '{}' > /tmp/tf-outputs-raw.json
-            jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
+            echo "Working directory: $(pwd)"
+            ls -la terragrunt.hcl || echo "No terragrunt.hcl found"
+            
+            if terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1; then
+              echo "terragrunt output succeeded"
+              cat /tmp/tf-outputs-raw.json
+              jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json 2>&1 || echo '{}' > /tmp/tf-outputs-filtered.json
+            else
+              echo "terragrunt output failed:"
+              cat /tmp/tf-outputs-raw.json
+              echo '{}' > /tmp/tf-outputs-filtered.json
+            fi
+            
             echo "Filtered outputs:"
             cat /tmp/tf-outputs-filtered.json
             base64 -w 0 /tmp/tf-outputs-filtered.json > /tmp/tf-outputs-encoded.txt

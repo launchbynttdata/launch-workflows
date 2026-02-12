@@ -139,6 +139,13 @@ jobs:
             ${{ inputs.after_deploy_commands }}
           INPUT_POST_EXEC_1: |
             ${{ inputs.after_shared_commands }}
+          INPUT_POST_EXEC_2: |
+            echo "=== Getting Terraform outputs ==="
+            terragrunt output -json > /tmp/tf-outputs-raw.json 2>&1 || echo '{}' > /tmp/tf-outputs-raw.json
+            jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
+            echo "Filtered outputs:"
+            cat /tmp/tf-outputs-filtered.json
+            base64 -w 0 /tmp/tf-outputs-filtered.json > /tmp/tf-outputs-encoded.txt
           TF_VAR_organization_tag: ${{ steps.set-tags.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
@@ -150,25 +157,6 @@ jobs:
           tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
-      - name: Get Terraform Outputs
-        id: get-outputs
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
-        env:
-          AWS_REGION: ${{ inputs.region }}
-          INPUT_PRE_EXEC_0: |
-            echo "=== Getting Terraform outputs ===" > /tmp/tf-outputs.log
-            terragrunt output -json 2>&1 | tee /tmp/tf-outputs-raw.json >> /tmp/tf-outputs.log || echo '{}' > /tmp/tf-outputs-raw.json
-            jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
-            cat /tmp/tf-outputs.log
-            echo "Filtered outputs:"
-            cat /tmp/tf-outputs-filtered.json
-            echo "$(base64 -w 0 /tmp/tf-outputs-filtered.json)" > /tmp/tf-outputs-encoded.txt
-        with:
-          tf_version: ${{ inputs.tf_version }}
-          tg_version: ${{ inputs.tg_version }}
-          tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'plan --help'
-      
       - name: Set Outputs
         id: set-outputs
         run: |

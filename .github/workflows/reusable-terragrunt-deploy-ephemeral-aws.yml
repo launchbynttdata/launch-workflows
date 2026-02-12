@@ -151,38 +151,30 @@ jobs:
           tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
       - name: Get Terraform Outputs
-        id: set-outputs
-        working-directory: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+        id: get-outputs
+        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
         env:
           AWS_REGION: ${{ inputs.region }}
+          INPUT_PRE_EXEC_0: |
+            echo "=== Getting Terraform outputs ===" > /tmp/tf-outputs.log
+            terragrunt output -json 2>&1 | tee /tmp/tf-outputs-raw.json >> /tmp/tf-outputs.log || echo '{}' > /tmp/tf-outputs-raw.json
+            jq 'with_entries(select(.value.sensitive != true))' /tmp/tf-outputs-raw.json > /tmp/tf-outputs-filtered.json || echo '{}' > /tmp/tf-outputs-filtered.json
+            cat /tmp/tf-outputs.log
+            echo "Filtered outputs:"
+            cat /tmp/tf-outputs-filtered.json
+            echo "$(base64 -w 0 /tmp/tf-outputs-filtered.json)" > /tmp/tf-outputs-encoded.txt
+        with:
+          tf_version: ${{ inputs.tf_version }}
+          tg_version: ${{ inputs.tg_version }}
+          tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
+          tg_command: 'plan --help'
+      
+      - name: Set Outputs
+        id: set-outputs
         run: |
-          # Install terraform
-          wget -q "https://releases.hashicorp.com/terraform/${{ inputs.tf_version }}/terraform_${{ inputs.tf_version }}_linux_amd64.zip"
-          unzip -q terraform_${{ inputs.tf_version }}_linux_amd64.zip
-          sudo mv terraform /usr/local/bin/
-          
-          # Install terragrunt
-          wget -q "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
-          chmod +x terragrunt_linux_amd64
-          sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
-          
-          echo "=== Getting Terraform outputs ==="
-          echo "Working directory: $(pwd)"
-          
-          # Try to get outputs, show errors if they occur
-          if ! TF_OUTPUTS_RAW=$(sudo terragrunt output -json 2>&1); then
-            echo "ERROR: Failed to get terraform outputs"
-            echo "$TF_OUTPUTS_RAW"
-            TF_OUTPUTS="{}"
+          if [ -f /tmp/tf-outputs-encoded.txt ]; then
+            ENCODED_OUTPUTS=$(cat /tmp/tf-outputs-encoded.txt)
           else
-            echo "Successfully retrieved terraform outputs"
-            TF_OUTPUTS=$(echo "$TF_OUTPUTS_RAW" | jq 'with_entries(select(.value.sensitive != true))')
+            ENCODED_OUTPUTS=$(echo '{}' | base64 -w 0)
           fi
-          
-          echo "Raw outputs:"
-          echo "$TF_OUTPUTS" | jq '.'
-          
-          # Base64 encode for safe transfer
-          ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
           echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
-          echo "=== Outputs captured and encoded ==="

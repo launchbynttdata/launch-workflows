@@ -170,7 +170,7 @@ jobs:
           echo "Working directory: $(pwd)"
           
           # Try to get outputs, show errors if they occur
-          if ! TF_OUTPUTS_RAW=$(terragrunt output -json 2>&1); then
+          if ! TF_OUTPUTS_RAW=$(sudo terragrunt output -json 2>&1); then
             echo "ERROR: Failed to get terraform outputs"
             echo "$TF_OUTPUTS_RAW"
             TF_OUTPUTS="{}"

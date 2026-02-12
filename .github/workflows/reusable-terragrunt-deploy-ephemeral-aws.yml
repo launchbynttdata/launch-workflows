@@ -157,7 +157,20 @@ jobs:
           AWS_REGION: ${{ inputs.region }}
         run: |
           echo "=== Getting Terraform outputs ==="
-          TF_OUTPUTS=$(terragrunt output -json 2>/dev/null || echo '{}')
+          echo "Working directory: $(pwd)"
+          echo "Checking for .terraform directory:"
+          ls -la .terraform* || echo "No .terraform directory found"
+          
+          # Try to get outputs, show errors if they occur
+          if ! TF_OUTPUTS_RAW=$(terragrunt output -json 2>&1); then
+            echo "ERROR: Failed to get terraform outputs"
+            echo "$TF_OUTPUTS_RAW"
+            TF_OUTPUTS="{}"
+          else
+            echo "Successfully retrieved terraform outputs"
+            TF_OUTPUTS=$(echo "$TF_OUTPUTS_RAW" | jq 'with_entries(select(.value.sensitive != true))')
+          fi
+          
           echo "Raw outputs:"
           echo "$TF_OUTPUTS" | jq '.'
           

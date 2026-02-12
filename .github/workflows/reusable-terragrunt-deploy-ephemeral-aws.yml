@@ -156,10 +156,13 @@ jobs:
         env:
           AWS_REGION: ${{ inputs.region }}
         run: |
+          # Install terragrunt
+          wget -q "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+          chmod +x terragrunt_linux_amd64
+          sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+          
           echo "=== Getting Terraform outputs ==="
           echo "Working directory: $(pwd)"
-          echo "Checking for .terraform directory:"
-          ls -la .terraform* || echo "No .terraform directory found"
           
           # Try to get outputs, show errors if they occur
           if ! TF_OUTPUTS_RAW=$(terragrunt output -json 2>&1); then

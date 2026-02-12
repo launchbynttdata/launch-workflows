@@ -155,12 +155,12 @@ jobs:
           tg_dir: '${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}'
           tg_command: 'apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
 
-      - name: Set Outputs
+      - name: Get Terraform Outputs
         id: set-outputs
         run: |
           if [ -f /tmp/tf-outputs-encoded.txt ]; then
             ENCODED_OUTPUTS=$(cat /tmp/tf-outputs-encoded.txt)
+            echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"
           else
-            ENCODED_OUTPUTS=$(echo '{}' | base64 -w 0)
+            echo "terraform_outputs=$(echo '{}' | base64 -w 0)" >> "$GITHUB_OUTPUT"
           fi
-          echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"

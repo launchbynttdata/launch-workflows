@@ -67,10 +67,10 @@ on:
         description: "Commands to run after both Terragrunt plan and apply. These are applied after after_plan_commands and after_deploy_commands."
         required: false
         type: string
-        default: ''
+        default: ""
     outputs:
       terraform_outputs:
-        description: 'JSON string containing all Terraform outputs from the deployment (base64 encoded)'
+        description: "JSON string containing all Terraform outputs from the deployment (base64 encoded)"
         value: ${{ jobs.deploy.outputs.terraform_outputs }}
 
 permissions:
@@ -110,16 +110,21 @@ jobs:
           echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
 
+      - name: Configure Mise
+        id: configure-mise
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@fix/upgrade-terragrunt-action
+        with:
+          tf_version: ${{ inputs.tf_version }}
+          tg_version: ${{ inputs.tg_version }}
+
       - name: Plan
         id: plan
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
+        uses: gruntwork-io/terragrunt-action@5e86476ca61eaf74adb9c0525745f29f921f2199
         env:
           AWS_REGION: ${{ inputs.region }}
           INPUT_PRE_EXEC_0: |
-            sudo apt update -yqq && sudo apt install python3 -yqq
-          INPUT_PRE_EXEC_1: |
             ${{ inputs.before_plan_commands }}
-          INPUT_PRE_EXEC_2: |
+          INPUT_PRE_EXEC_1: |
             ${{ inputs.before_shared_commands }}
           INPUT_POST_EXEC_0: |
             ${{ inputs.after_plan_commands }}
@@ -130,20 +135,18 @@ jobs:
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
           TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
         with:
-          tf_version: ${{ inputs.tf_version }}
+          tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
           tg_command: "plan -out=${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Deploy
-        uses: gruntwork-io/terragrunt-action@aee21a7df999be8b471c2a8564c6cd853cb674e1
+        uses: gruntwork-io/terragrunt-action@5e86476ca61eaf74adb9c0525745f29f921f2199
         env:
           AWS_REGION: ${{ inputs.region }}
           INPUT_PRE_EXEC_0: |
-            sudo apt update -yqq && sudo apt install python3 -yqq
-          INPUT_PRE_EXEC_1: |
             ${{ inputs.before_deploy_commands }}
-          INPUT_PRE_EXEC_2: |
+          INPUT_PRE_EXEC_1: |
             ${{ inputs.before_shared_commands }}
           INPUT_POST_EXEC_0: |
             ${{ inputs.after_deploy_commands }}
@@ -154,14 +157,14 @@ jobs:
           TF_VAR_commit_hash_tag: ${{ steps.set-tags.outputs.TF_VAR_commit_hash_tag }}
           TF_VAR_branch_tag: ${{ steps.set-tags.outputs.TF_VAR_branch_tag }}
         with:
-          tf_version: ${{ inputs.tf_version }}
+          tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
-          tg_command: 'apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan'
+          tg_dir: "${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_command: "apply ${{ inputs.environment }}-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Get Terraform Outputs
         id: set-outputs
-        working-directory: '${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}'
+        working-directory: "${{ inputs.environments_root }}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
         env:
           AWS_REGION: ${{ inputs.region }}
         run: |
@@ -169,7 +172,7 @@ jobs:
           TF_OUTPUTS=$(terragrunt output -json 2>/dev/null | jq 'with_entries(select(.value.sensitive != true))' || echo '{}')
           echo "Raw outputs:"
           echo "$TF_OUTPUTS" | jq '.'
-          
+
           # Base64 encode for safe transfer
           ENCODED_OUTPUTS=$(echo "$TF_OUTPUTS" | base64 -w 0)
           echo "terraform_outputs=$ENCODED_OUTPUTS" >> "$GITHUB_OUTPUT"

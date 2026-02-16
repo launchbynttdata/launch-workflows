@@ -1,8 +1,8 @@
 name: Lint this repository
 on:
   pull_request:
-    types: [ opened, reopened, synchronize, ready_for_review ]
-    branches: [ main ]
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
-      
+
       - name: Check documentation exists
         shell: python
         run: |
@@ -31,10 +31,10 @@ jobs:
 
           for reusable_workflow in reusable_workflow_filenames:
               workflow_name = reusable_workflow.stem
-              expected_doc_path = pathlib.Path(f'docs/{workflow_name}.md')
+              expected_doc_path = pathlib.Path(f'docs/workflows/{workflow_name}.md')
               if not expected_doc_path.exists():
                   missing_documentation.append(str(expected_doc_path))
-          
+
           if missing_documentation:
               raise ValueError(f"Missing documentation for reusable workflows: {', '.join(missing_documentation)}")
           else:

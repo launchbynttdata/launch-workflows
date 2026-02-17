@@ -1,0 +1,41 @@
+name: "Configure Mise for Terragrunt"
+description: "Configure Mise to install specific versions of Terraform and Terragrunt for use with terragrunt-action"
+inputs:
+  tf_version:
+    description: "Version of Terraform to install"
+    required: true
+  tg_version:
+    description: "Version of Terragrunt to install"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Configure Mise
+      shell: bash
+      run: |
+        # Terragrunt-action uses Mise to manage binary versions.
+        if [ ! -f mise.toml ]; then
+          # If there's no mise.toml already, we'll create one with the versions passed to this workflow.
+          echo "Creating mise.toml with specified versions..."
+          cat <<EOF > mise.toml
+        [tools]
+        terragrunt = "${{ inputs.tg_version }}"
+        terraform = "${{ inputs.tf_version }}"
+        EOF
+        else
+          # If a mise.toml file does exist, upsert values for Terragrunt and Terraform with the passed versions.
+          echo "mise.toml exists, updating with specified versions..."
+
+          # Install toml-cli if not already available
+          if ! command -v toml &> /dev/null; then
+            echo "Installing toml-cli..."
+            pip install toml-cli
+          fi
+
+          # https://github.com/mrijken/toml-cli
+          # `toml set` will add if necessary or update if the entry already exists
+          toml set mise.toml tools.terragrunt "${{ inputs.tg_version }}"
+          toml set mise.toml tools.terraform "${{ inputs.tf_version }}"
+        fi
+        echo "Final mise.toml configuration:"
+        cat mise.toml

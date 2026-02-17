@@ -17,7 +17,7 @@ on:
         value: ${{ jobs.get-terragrunt-versions.outputs.tf_version }}
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
   get-terragrunt-versions:

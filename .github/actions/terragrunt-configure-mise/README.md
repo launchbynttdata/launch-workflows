@@ -33,7 +33,7 @@ jobs:
         with:
           tf_version: '1.5.5'
           tg_version: '0.54.11'
-      
+
       # terragrunt-action will use mise.toml to install dependencies
       - name: Plan
         id: plan

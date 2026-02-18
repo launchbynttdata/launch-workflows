@@ -54,3 +54,16 @@ jobs:
 ```
 
 Be sure you replace `ref` with an appropriate ref to this repository.
+
+If this workflow runs in a repository without a prior Release being published, the first release will always be drafted with version 0.1.0. This is expected behavior and conforms to the SemVer spec, which permits a major version zero. From the SemVer documentation:
+
+> How should I deal with revisions in the 0.y.z initial development phase?
+> The simplest thing to do is start your initial development release at 0.1.0 and then increment the minor version for each subsequent release.
+>
+> How do I know when to release 1.0.0?
+> If your software is being used in production, it should probably already be 1.0.0. If you have a stable API on which users have come to depend, you should be 1.0.0. If you’re worrying a lot about backward compatibility, you should probably already be 1.0.0.
+>
+> Doesn’t this discourage rapid development and fast iteration?
+> Major version zero is all about rapid development. If you’re changing the API every day you should either still be in version 0.y.z or on a separate development branch working on the next major version.
+
+Given that this workflow only drafts the release, you may manually edit the drafted release to rename and re-tag it with the version of your choosing if you wanted your first release to reflect 1.0.0 prior to publishing. If you are integrating this workflow into a repository that has tags, but no releases, you will need to perform this manual step to make sure your first true release follows your existing tags. If you integrate this workflow into a repository that has prior releases, the next drafted release will take the prior releases into account and will increment its version according to the tags found on the pull request that initiates the workflow run.

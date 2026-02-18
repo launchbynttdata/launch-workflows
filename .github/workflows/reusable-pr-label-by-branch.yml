@@ -22,7 +22,7 @@ jobs:
           jq -e 'if map(select(.name | contains ("major"))) == [] then null else "Label major exists" end' labels.json || gh label create major --color "b60205"
   label-pr:
     name: Label Pull Request
-    needs: [ configure-labels ]
+    needs: [configure-labels]
     permissions:
       contents: read
       pull-requests: write
@@ -50,7 +50,7 @@ jobs:
               echo "updates_configuration=false" >> $GITHUB_OUTPUT
             fi
           if [[ $PR_NUMBER -eq "1" ]]; then
-            if git cat-file -e ${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
+            if git cat-file -e origin/${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
               # First PR, but we have a release-drafter.yml file on the main branch so we can let it proceed as normal.
               echo "auto_label=true" >> $GITHUB_OUTPUT
             else
@@ -63,7 +63,7 @@ jobs:
             # Not the first PR, so we can attempt to auto-label it.
             echo "auto_label=true" >> $GITHUB_OUTPUT
           fi
-          
+
           rm first-time-comment.md
       - uses: release-drafter/release-drafter@6db134d15f3909ccc9eefd369f02bd1e9cffdf97
         if: steps.prerequisite-check.outputs.auto_label == 'true'

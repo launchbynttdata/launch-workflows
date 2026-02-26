@@ -579,6 +579,20 @@ def apply_repo(repo_name, org, version, provider_override, branch):
         pr_url = pr_out.strip()
         print(f"  PR created: {pr_url}")
 
+        # Ensure the "patch" label exists (legacy repos may not have it)
+        run_cmd(
+            ["gh", "label", "create", "patch", "--color", "006b75", "--force",
+             "--repo", f"{org}/{repo_name}"],
+            check=False,
+        )
+
+        # Apply the "patch" label to the PR
+        run_cmd(
+            ["gh", "pr", "edit", pr_url, "--add-label", "patch",
+             "--repo", f"{org}/{repo_name}"],
+        )
+        print("  Label 'patch' applied")
+
     except RuntimeError as exc:
         print(f"  ERROR: {exc}")
     finally:

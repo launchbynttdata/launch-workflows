@@ -50,7 +50,7 @@ jobs:
               echo "updates_configuration=false" >> $GITHUB_OUTPUT
             fi
           if [[ $PR_NUMBER -eq "1" ]]; then
-            if git cat-file -e ${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
+            if git cat-file -e origin/${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
               # First PR, but we have a release-drafter.yml file on the main branch so we can let it proceed as normal.
               echo "auto_label=true" >> $GITHUB_OUTPUT
             else

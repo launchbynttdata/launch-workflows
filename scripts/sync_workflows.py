@@ -330,6 +330,18 @@ ifneq (,$(wildcard ./TEMPLATED_README.md))
 endif
 """
 
+TEMPLATE_TOOL_VERSIONS = """\
+conftest 0.56.0
+golang 1.24.2
+golangci-lint 2.10.1
+pre-commit 4.2.0
+regula 3.2.1 # https://github.com/launchbynttdata/asdf-regula
+terraform 1.10.3
+terraform-docs 0.20.0
+terragrunt 0.77.22
+tflint 0.57.0
+"""
+
 # ---------------------------------------------------------------------------
 # Skeleton repo SHA validation
 #
@@ -352,7 +364,8 @@ SKELETON_SHAS = {
     ".github/workflows/pull-request-terraform-check-aws.yml": "ca7bde6a9ad9dde8b917519691f6bb02f7f2f075",
     ".github/workflows/pull-request-terraform-check-azure.yml": "9eba6b22d9ca2c9a77b4b01fa85c925735b72c3d",
     ".github/workflows/release-publish.yml": "ce5037ca825c595ce7d151949ba2c966a7b8af3b",
-    # TODO: Add Makefile SHA once lcaf-skeleton-terraform PR #30 merges (updates REPO_BRANCH to 1.8.1)
+    # TODO: Add Makefile SHA (8f87fc354c58ac466252555518d1c2a8ca0da8c1) after lcaf-skeleton-terraform PR #30 merges
+    # TODO: Add .tool-versions SHA after skeleton repo updates golangci-lint to v2
 }
 
 # ---------------------------------------------------------------------------
@@ -475,6 +488,7 @@ def get_expected_files(provider, version):
         ".github/release-drafter.yml": TEMPLATE_RELEASE_DRAFTER,
         ".github/dependabot.yml": TEMPLATE_DEPENDABOT,
         "Makefile": TEMPLATE_MAKEFILE,
+        ".tool-versions": TEMPLATE_TOOL_VERSIONS,
     }
     return files
 
@@ -510,6 +524,19 @@ def fetch_file_content(org, repo_name, path):
         return None
 
 
+def preserve_terraform_version(template_content, existing_content):
+    """Replace the terraform line in template with the one from the existing .tool-versions.
+
+    Returns template_content unchanged if existing_content is None or has no terraform line.
+    """
+    if not existing_content:
+        return template_content
+    for line in existing_content.splitlines():
+        if line.startswith("terraform "):
+            return re.sub(r"^terraform .+$", line, template_content, flags=re.MULTILINE)
+    return template_content
+
+
 def extract_versions(content):
     """Extract launch-workflows version refs from file content."""
     return re.findall(r"launch-workflows/[^@]+@(\d+\.\d+\.\d+)", content)
@@ -538,6 +565,13 @@ def dry_run_repo(repo_name, org, version, provider_override):
         return
 
     tree_paths = {item["path"] for item in tree}
+
+    # Preserve existing terraform version in .tool-versions
+    if ".tool-versions" in tree_paths:
+        existing_tv = fetch_file_content(org, repo_name, ".tool-versions")
+        expected[".tool-versions"] = preserve_terraform_version(
+            expected[".tool-versions"], existing_tv
+        )
 
     # Check for legacy files
     legacy_present = [f for f in LEGACY_FILES if f in tree_paths]
@@ -619,6 +653,14 @@ def apply_repo(repo_name, org, version, provider_override, branch):
         # Clone
         print(f"  Cloning {org}/{repo_name}...")
         run_cmd(["gh", "repo", "clone", f"{org}/{repo_name}", clone_dir, "--", "--depth=1"])
+
+        # Preserve existing terraform version in .tool-versions
+        existing_tv_path = os.path.join(clone_dir, ".tool-versions")
+        if os.path.exists(existing_tv_path):
+            with open(existing_tv_path, "r") as fh:
+                expected[".tool-versions"] = preserve_terraform_version(
+                    expected[".tool-versions"], fh.read()
+                )
 
         # Detect state before changes
         legacy_files = [f for f in LEGACY_FILES if os.path.exists(os.path.join(clone_dir, f))]

@@ -1,6 +1,12 @@
 version: 2
+
+multi-ecosystem-groups:
+  workflows:
+    schedule:
+      interval: "weekly"
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    multi-ecosystem-group: "workflows"
+    patterns: ["*"]

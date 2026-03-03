@@ -29,8 +29,39 @@ jobs:
       pull-requests: write
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-pr-label-by-branch.yml@ref
     secrets: inherit
-
-
 ```
 
 Be sure you replace `ref` with an appropriate ref to this repository.
+
+## Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `remove_dependabot_labels` | Whether to remove labels applied by Dependabot. If true, the workflow will attempt to remove any labels applied by Dependabot on the pull request, except for those specified in `preserve_dependabot_labels`. | No | `true` |
+| `preserve_dependabot_labels` | Comma-separated list of Dependabot labels to preserve when `remove_dependabot_labels` is true. | No | `dependencies` |
+
+### Dependabot Label Handling
+
+By default, this workflow removes labels that Dependabot applies to pull requests (such as `go`, `javascript`, `python`, etc.) while preserving the `dependencies` label. This prevents Dependabot's ecosystem-specific labels from interfering with the branch-based labeling strategy.
+
+To disable this behavior:
+
+```yaml
+jobs:
+  check:
+    uses: launchbynttdata/launch-workflows/.github/workflows/reusable-pr-label-by-branch.yml@ref
+    with:
+      remove_dependabot_labels: false
+    secrets: inherit
+```
+
+To preserve additional Dependabot labels:
+
+```yaml
+jobs:
+  check:
+    uses: launchbynttdata/launch-workflows/.github/workflows/reusable-pr-label-by-branch.yml@ref
+    with:
+      preserve_dependabot_labels: "dependencies,security"
+    secrets: inherit
+```

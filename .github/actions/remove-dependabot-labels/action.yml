@@ -1,0 +1,104 @@
+name: "Remove Dependabot Labels"
+description: "Remove labels applied by Dependabot from a pull request, except for the specified label(s) to preserve."
+inputs:
+  pr_number:
+    description: "The pull request number to process. Defaults to the PR number from the event context."
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  github_token:
+    description: "GitHub token for API access. Defaults to the automatic GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+  preserve_labels:
+    description: "Comma-separated list of Dependabot labels to preserve (default: dependencies)"
+    required: false
+    default: "dependencies"
+runs:
+  using: "composite"
+  steps:
+    - name: Remove Dependabot Labels
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        PR_NUMBER: ${{ inputs.pr_number }}
+        PRESERVE_LABELS: ${{ inputs.preserve_labels }}
+      run: |
+        if [[ -z "$PR_NUMBER" ]]; then
+          echo "Error: PR number not provided and not available in the event context."
+          echo "Please provide a pr_number input or run this action from a pull_request event."
+          exit 1
+        fi
+
+        echo "Processing PR #${PR_NUMBER} to remove Dependabot-applied labels..."
+
+        # Convert preserve_labels to an array for easy lookup
+        IFS=',' read -ra PRESERVE_ARRAY <<< "$PRESERVE_LABELS"
+
+        # Function to check if a label should be preserved
+        should_preserve() {
+          local label="$1"
+          for preserve in "${PRESERVE_ARRAY[@]}"; do
+            # Trim whitespace
+            preserve=$(echo "$preserve" | xargs)
+            if [[ "$label" == "$preserve" ]]; then
+              return 0
+            fi
+          done
+          return 1
+        }
+
+        # Get all label events for this PR (labeled events only, applied by dependabot)
+        # The issues events API works for PRs since PRs are issues
+        echo "Fetching label events..."
+        LABEL_EVENTS=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/events" \
+          --paginate \
+          --jq '[.[] | select(.event == "labeled" and (.actor.login == "dependabot[bot]" or .actor.type == "Bot" and .actor.login == "dependabot")) | .label.name] | unique')
+
+        if [[ "$LABEL_EVENTS" == "[]" ]] || [[ -z "$LABEL_EVENTS" ]]; then
+          echo "No labels applied by Dependabot found."
+          exit 0
+        fi
+
+        echo "Labels applied by Dependabot: $LABEL_EVENTS"
+
+        # Get current labels on the PR to ensure we only try to remove labels that exist
+        CURRENT_LABELS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq '[.labels[].name]')
+        echo "Current labels on PR: $CURRENT_LABELS"
+
+        # Process each label applied by Dependabot
+        LABELS_TO_REMOVE=()
+        while IFS= read -r label; do
+          # Skip empty lines
+          [[ -z "$label" ]] && continue
+          
+          # Check if this label should be preserved
+          if should_preserve "$label"; then
+            echo "Preserving label: $label"
+            continue
+          fi
+
+          # Check if the label is still on the PR
+          if echo "$CURRENT_LABELS" | jq -e --arg label "$label" 'index($label) != null' > /dev/null 2>&1; then
+            LABELS_TO_REMOVE+=("$label")
+          else
+            echo "Label '$label' is no longer on the PR, skipping."
+          fi
+        done < <(echo "$LABEL_EVENTS" | jq -r '.[]')
+
+        # Remove the labels
+        if [[ ${#LABELS_TO_REMOVE[@]} -eq 0 ]]; then
+          echo "No labels to remove."
+          exit 0
+        fi
+
+        echo "Labels to remove: ${LABELS_TO_REMOVE[*]}"
+        for label in "${LABELS_TO_REMOVE[@]}"; do
+          echo "Removing label: $label"
+          # URL encode the label name for the API call
+          ENCODED_LABEL=$(printf '%s' "$label" | jq -sRr @uri)
+          gh api -X DELETE "repos/${{ github.repository }}/issues/${PR_NUMBER}/labels/${ENCODED_LABEL}" || {
+            echo "Warning: Failed to remove label '$label'. It may have already been removed."
+          }
+        done
+
+        echo "Done processing Dependabot labels."

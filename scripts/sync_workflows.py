@@ -180,19 +180,30 @@ version-resolver:
 
 TEMPLATE_DEPENDABOT = """\
 version: 2
+
+multi-ecosystem-groups:
+  module:
+    schedule:
+      interval: "weekly"
+  workflows:
+    schedule:
+      interval: "weekly"
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    multi-ecosystem-group: "workflows"
+    patterns: ["*"]
+
   - package-ecosystem: "gomod"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    multi-ecosystem-group: "module"
+    patterns: ["*"]
+
   - package-ecosystem: "terraform"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    multi-ecosystem-group: "module"
+    patterns: ["*"]
 """
 
 TEMPLATE_MAKEFILE = """\
@@ -358,12 +369,12 @@ tflint 0.57.0
 SKELETON_REPO = "lcaf-skeleton-terraform"
 
 SKELETON_SHAS = {
-    ".github/dependabot.yml": "7fa88bc19905c8f7f91e4e1dde16907704698d26",
+    ".github/dependabot.yml": "2b03ac8f2270cfda47e7c23ec04b526f8630ca57",
     ".github/release-drafter.yml": "6ab7d45d7386af7b9bdde2672abb1b0a251036d8",
-    ".github/workflows/pull-request-label.yml": "419a624fe4ca505fb4ed9ea345be0f67281b90c3",
-    ".github/workflows/pull-request-terraform-check-aws.yml": "ca7bde6a9ad9dde8b917519691f6bb02f7f2f075",
-    ".github/workflows/pull-request-terraform-check-azure.yml": "9eba6b22d9ca2c9a77b4b01fa85c925735b72c3d",
-    ".github/workflows/release-publish.yml": "ce5037ca825c595ce7d151949ba2c966a7b8af3b",
+    ".github/workflows/pull-request-label.yml": "6a2936b27ce62799b19e20d59c918f436fac00ad",
+    ".github/workflows/pull-request-terraform-check-aws.yml": "7ee890138b85d6b4d71007b0600c0ba9a5570e0b",
+    ".github/workflows/pull-request-terraform-check-azure.yml": "8ea158d4513ae7bfa74de98956b58b24237de1c1",
+    ".github/workflows/release-publish.yml": "8f7d50dc92bee2afdc43f59f6aea749ad99ab53d",
     # TODO: Add Makefile SHA (8f87fc354c58ac466252555518d1c2a8ca0da8c1) after lcaf-skeleton-terraform PR #30 merges
     # TODO: Add .tool-versions SHA after skeleton repo updates golangci-lint to v2
 }

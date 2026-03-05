@@ -2,7 +2,17 @@ name: Label Pull Request by Branch
 
 on:
   workflow_call:
-
+    inputs:
+      remove_dependabot_labels:
+        description: "Whether to remove labels applied by Dependabot. If true, the workflow will attempt to remove any labels applied by Dependabot on the pull request, except for those specified in preserve_dependabot_labels."
+        required: false
+        default: true
+        type: boolean
+      preserve_dependabot_labels:
+        description: "Comma-separated list of Dependabot labels to preserve when remove_dependabot_labels is true. Default: dependencies"
+        required: false
+        default: dependencies
+        type: string
 jobs:
   configure-labels:
     name: Configure Labels
@@ -20,9 +30,10 @@ jobs:
           jq -e 'if map(select(.name | contains ("patch"))) == [] then null else "Label patch exists" end' labels.json || gh label create patch --color "006b75"
           jq -e 'if map(select(.name | contains ("minor"))) == [] then null else "Label minor exists" end' labels.json || gh label create minor --color "fbca04"
           jq -e 'if map(select(.name | contains ("major"))) == [] then null else "Label major exists" end' labels.json || gh label create major --color "b60205"
+          jq -e 'if map(select(.name | contains ("dependencies"))) == [] then null else "Label dependencies exists" end' labels.json || gh label create dependencies --color "0366d6"
   label-pr:
     name: Label Pull Request
-    needs: [ configure-labels ]
+    needs: [configure-labels]
     permissions:
       contents: read
       pull-requests: write
@@ -50,7 +61,7 @@ jobs:
               echo "updates_configuration=false" >> $GITHUB_OUTPUT
             fi
           if [[ $PR_NUMBER -eq "1" ]]; then
-            if git cat-file -e ${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
+            if git cat-file -e origin/${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
               # First PR, but we have a release-drafter.yml file on the main branch so we can let it proceed as normal.
               echo "auto_label=true" >> $GITHUB_OUTPUT
             else
@@ -63,8 +74,15 @@ jobs:
             # Not the first PR, so we can attempt to auto-label it.
             echo "auto_label=true" >> $GITHUB_OUTPUT
           fi
-          
+
           rm first-time-comment.md
+
+      - uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@0.14.2
+        if: ${{ inputs.remove_dependabot_labels }}
+        id: remove-dependabot-labels
+        with:
+          preserve_labels: ${{ inputs.preserve_dependabot_labels }}
+
       - uses: release-drafter/release-drafter@6db134d15f3909ccc9eefd369f02bd1e9cffdf97
         if: steps.prerequisite-check.outputs.auto_label == 'true'
         id: autolabel

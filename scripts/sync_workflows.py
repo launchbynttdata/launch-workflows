@@ -692,7 +692,10 @@ def apply_repo(repo_name, org, version, provider_override, branch):
 
         # Clone repo
         print(f"  Cloning {org}/{repo_name}...")
-        run_cmd(["gh", "repo", "clone", f"{org}/{repo_name}", clone_dir, "--", "--depth=1"])
+        run_cmd([
+            "gh", "repo", "clone", f"{org}/{repo_name}", clone_dir,
+            "--", "--depth=1", "-c", "core.symlinks=false",
+        ])
 
         # Preserve existing terraform version in .tool-versions
         existing_tv_path = os.path.join(clone_dir, ".tool-versions")

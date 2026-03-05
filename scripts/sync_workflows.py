@@ -384,14 +384,39 @@ SKELETON_SHAS = {
 # ---------------------------------------------------------------------------
 
 
-def run_cmd(cmd, cwd=None, capture=True, check=True):
+def run_cmd(cmd, cwd=None, capture=True, check=True, env=None):
     """Run a shell command and return stdout."""
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, env=env)
     if check and result.returncode != 0:
         raise RuntimeError(
             f"Command failed: {' '.join(cmd)}\nstderr: {result.stderr.strip()}"
         )
     return result.stdout if capture else result
+
+
+def check_gh_scopes():
+    """Verify the gh token has the 'workflow' scope required to push workflow files.
+
+    Exits with a helpful message if the scope is missing.
+    """
+    result = run_cmd(["gh", "auth", "status"], capture=False)
+    combined = (result.stdout or "") + (result.stderr or "")
+    if "'workflow'" not in combined:
+        print(
+            "ERROR: Your gh token is missing the 'workflow' scope, which is\n"
+            "required to push changes to .github/workflows/ files.\n"
+            "\n"
+            "Run:  gh auth refresh -s workflow\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+# Git CLI args to authenticate via gh without browser prompts.
+# The empty credential.helper= clears the multi-valued helper list (removing
+# system/global helpers like macOS Keychain), then the second -c adds only
+# the gh credential helper.
+GIT_AUTH_ARGS = ["-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential"]
 
 
 def validate_skeleton(org):
@@ -645,13 +670,17 @@ def dry_run_repo(repo_name, org, version, provider_override):
 
 
 def apply_repo(repo_name, org, version, provider_override, branch):
-    """Clone, branch, edit, commit, push, and open a PR for a single repo."""
+    """Clone, branch, edit, commit, push, and open a PR for a single repo.
+
+    Returns a tuple of (repo_name, status, detail) where status is one of:
+    "pr_created", "skip_provider", "skip_branch_exists", "skip_no_changes", "error".
+    """
     try:
         provider = detect_provider(repo_name, provider_override)
     except ValueError as exc:
         print(f"\n=== {repo_name} ===")
         print(f"  SKIP ({exc})")
-        return
+        return (repo_name, "skip_provider", str(exc))
 
     expected = get_expected_files(provider, version)
 
@@ -661,10 +690,9 @@ def apply_repo(repo_name, org, version, provider_override, branch):
     try:
         print(f"\n=== {repo_name} ===")
 
-        # Clone and configure credential helper so pushes don't prompt
+        # Clone repo
         print(f"  Cloning {org}/{repo_name}...")
         run_cmd(["gh", "repo", "clone", f"{org}/{repo_name}", clone_dir, "--", "--depth=1"])
-        run_cmd(["git", "config", "credential.helper", "!gh auth git-credential"], cwd=clone_dir)
 
         # Preserve existing terraform version in .tool-versions
         existing_tv_path = os.path.join(clone_dir, ".tool-versions")
@@ -681,12 +709,12 @@ def apply_repo(repo_name, org, version, provider_override, branch):
 
         # Check if branch already exists on remote
         ls_out = run_cmd(
-            ["git", "ls-remote", "--heads", "origin", branch],
+            ["git"] + GIT_AUTH_ARGS + ["ls-remote", "--heads", "origin", branch],
             cwd=clone_dir,
         )
         if ls_out.strip():
             print(f"  SKIP (branch '{branch}' already exists on remote — PR may already be open)")
-            return
+            return (repo_name, "skip_branch_exists", branch)
 
         # Create branch
         run_cmd(["git", "checkout", "-b", branch], cwd=clone_dir)
@@ -718,7 +746,7 @@ def apply_repo(repo_name, org, version, provider_override, branch):
         status_out = run_cmd(["git", "status", "--porcelain"], cwd=clone_dir)
         if not status_out.strip():
             print("  SKIP (no changes needed)")
-            return
+            return (repo_name, "skip_no_changes", None)
 
         # Commit
         if is_legacy:
@@ -730,7 +758,7 @@ def apply_repo(repo_name, org, version, provider_override, branch):
 
         # Push
         print(f"  Pushing branch '{branch}'...")
-        run_cmd(["git", "push", "-u", "origin", branch], cwd=clone_dir)
+        run_cmd(["git"] + GIT_AUTH_ARGS + ["push", "-u", "origin", branch], cwd=clone_dir)
 
         # Build PR body
         status_lines = status_out.strip().split("\n")
@@ -783,11 +811,61 @@ def apply_repo(repo_name, org, version, provider_override, branch):
              "--repo", f"{org}/{repo_name}"],
         )
         print("  Label 'patch' applied")
+        return (repo_name, "pr_created", pr_url)
 
     except RuntimeError as exc:
         print(f"  ERROR: {exc}")
+        return (repo_name, "error", str(exc))
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+
+_STATUS_LABELS = {
+    "pr_created": "PR created",
+    "skip_provider": "Skipped (provider detection failed)",
+    "skip_branch_exists": "Skipped (branch already exists)",
+    "skip_no_changes": "Skipped (no changes needed)",
+    "error": "Error",
+}
+
+
+def print_summary(results):
+    """Print a grouped summary of apply_repo results."""
+    groups = {}
+    for repo_name, status, detail in results:
+        groups.setdefault(status, []).append((repo_name, detail))
+
+    print("\n" + "=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+
+    # Print counts
+    for status in ("pr_created", "skip_no_changes", "skip_branch_exists",
+                    "skip_provider", "error"):
+        items = groups.get(status, [])
+        if items:
+            print(f"  {_STATUS_LABELS[status]}: {len(items)}")
+
+    total = len(results)
+    print(f"  Total: {total}")
+
+    # Print details per group
+    for status in ("pr_created", "skip_no_changes", "skip_branch_exists",
+                    "skip_provider", "error"):
+        items = groups.get(status, [])
+        if not items:
+            continue
+        print(f"\n--- {_STATUS_LABELS[status]} ({len(items)}) ---")
+        for repo_name, detail in items:
+            if detail:
+                print(f"  {repo_name}: {detail}")
+            else:
+                print(f"  {repo_name}")
 
 
 # ---------------------------------------------------------------------------
@@ -821,6 +899,10 @@ def main():
         print("Validating templates against skeleton repo...")
         validate_skeleton(args.org)
 
+    # Verify gh token has required scopes for pushing workflow files
+    if not args.dry_run:
+        check_gh_scopes()
+
     # Resolve version
     if args.version:
         version = args.version
@@ -839,13 +921,19 @@ def main():
         repos = [args.repo]
 
     # Process each repo
+    results = []
     for repo_name in repos:
         if args.dry_run:
             dry_run_repo(repo_name, args.org, version, args.provider)
         else:
-            apply_repo(repo_name, args.org, version, args.provider, args.branch)
+            result = apply_repo(repo_name, args.org, version, args.provider, args.branch)
+            if result:
+                results.append(result)
 
-    print()
+    if results:
+        print_summary(results)
+    else:
+        print()
 
 
 if __name__ == "__main__":

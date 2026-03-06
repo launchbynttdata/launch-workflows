@@ -21,6 +21,21 @@ python scripts/sync_workflows.py --repo tf-aws-module_primitive-sqs_queue
 python scripts/sync_workflows.py --all --version 0.14.2
 ```
 
+## check_pr_status.py
+
+Checks the status of sync-workflows PRs across all `tf-*` repos. For each repo, reports whether the branch exists, whether an open PR exists, and whether CI checks are passing. Optionally writes a CSV file for tracking PR completion in a shared spreadsheet.
+
+```sh
+# Check status for all repos
+python scripts/check_pr_status.py
+
+# Check a different branch
+python scripts/check_pr_status.py --branch chore/sync-workflows
+
+# Export a CSV for tracking in Google Sheets / Excel
+python scripts/check_pr_status.py --csv pr_status.csv
+```
+
 ## create_missing_releases.py
 
 Backfills GitHub releases for repos that have semver tags but no releases. This is needed because the old `increment_tagged_version` workflow created tags on merge but never created GitHub releases, while the new `launch-workflows` release pipeline requires a release to exist.

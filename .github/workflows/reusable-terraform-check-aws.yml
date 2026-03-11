@@ -65,6 +65,9 @@ jobs:
         run: |
           make lint
 
+      - name: "Terraform Init"
+        run: terraform init -backend=false
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:

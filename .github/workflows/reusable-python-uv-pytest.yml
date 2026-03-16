@@ -70,7 +70,7 @@ jobs:
         key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098
+      uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -99,7 +99,7 @@ jobs:
 
     - name: Report coverage
       if: ${{ inputs.report-coverage }}
-      uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4
+      uses: MishaKav/pytest-coverage-comment@287292879eaaff04116f36d3eb1a670f6e5df1a4
       with:
         pytest-xml-coverage-path: ./htmlcov/coverage.xml
         title: Coverage report for Python ${{ matrix.python-version }}

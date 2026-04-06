@@ -1,0 +1,169 @@
+name: Check Terraform Code
+
+on:
+  workflow_call:
+    inputs:
+      auth_method:
+        description: 'Authentication method to use for Terraform checks. Valid values are "none", "aws", and "azure".'
+        required: true
+        type: string
+      assume_role_arn:
+        description: "ARN of the role to assume when running tests and creating test resources. Required if auth_method is 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN variable."
+        required: false
+        type: string
+        default: "${{ vars.TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN }}"
+      region:
+        description: "AWS region to deploy when running tests and creating resources. Required if auth_method is 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_REGION variable."
+        default: "${{ vars.TERRAFORM_CHECK_AWS_REGION }}"
+        required: false
+        type: string
+    secrets:
+      # If using Azure authentication, these secrets must be provided. They are not required for the workflow itself to allow reuse in non-Azure contexts.
+      TERRAFORM_CHECK_AZURE_CLIENT_ID:
+        required: false
+      TERRAFORM_CHECK_AZURE_TENANT_ID:
+        required: false
+      TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID:
+        required: false
+
+permissions:
+  contents: read
+  id-token: write # Required for various OIDC auth flows.
+
+jobs:
+  validate-inputs:
+    name: "Validate Inputs"
+    runs-on: ubuntu-latest
+    outputs:
+      auth_method: ${{ steps.validate.outputs.auth_method }}
+    steps:
+      - name: Validate inputs and secrets
+        id: validate
+        shell: bash
+        run: |
+          if [[ "${{ inputs.auth_method }}" != "none" && "${{ inputs.auth_method }}" != "aws" && "${{ inputs.auth_method }}" != "azure" ]]; then
+            echo "Error: Invalid auth_method input '${{ inputs.auth_method }}'. Valid values are 'none', 'aws', and 'azure'."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.auth_method }}" == "aws" ]]; then
+            if [[ -z "${{ inputs.assume_role_arn }}" ]]; then
+              echo "Error: assume_role_arn input is required when auth_method is 'aws'."
+              exit 1
+            fi
+            if [[ -z "${{ inputs.region }}" ]]; then
+              echo "Error: region input is required when auth_method is 'aws'."
+              exit 1
+            fi
+          fi
+
+          if [[ "${{ inputs.auth_method }}" == "azure" ]]; then
+            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}" ]]; then
+              echo "Error: TERRAFORM_CHECK_AZURE_CLIENT_ID secret is required when auth_method is 'azure'."
+              exit 1
+            fi
+            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}" ]]; then
+              echo "Error: TERRAFORM_CHECK_AZURE_TENANT_ID secret is required when auth_method is 'azure'."
+              exit 1
+            fi
+            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}" ]]; then
+              echo "Error: TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID secret is required when auth_method is 'azure'."
+              exit 1
+            fi
+          fi
+
+          echo "auth_method=${{ inputs.auth_method }}" >> $GITHUB_OUTPUT
+  check:
+    name: "Run Tests"
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: dependencies
+        name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: cache-restore
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: configure
+        name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          if [[ "${{ needs.validate-inputs.outputs.auth_method }}" == "aws" ]]; then
+            export AWS_REGION=${{ inputs.region }}
+          elif [[ "${{ needs.validate-inputs.outputs.auth_method }}" == "azure" ]]; then
+            export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+          fi
+          make configure
+
+      - id: save-cache
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        name: Cache asdf tools
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: lint
+        name: "make lint"
+        run: |
+          make lint
+
+      - id: configure-aws-credentials
+        name: Configure AWS credentials
+        if: needs.validate-inputs.outputs.auth_method == 'aws'
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
+        with:
+          role-to-assume: ${{ inputs.assume_role_arn }}
+          role-session-name: ${{ github.run_id }}
+          aws-region: ${{ inputs.region }}
+
+      - id: create-aws-profile
+        name: "Create AWS Profile"
+        if: needs.validate-inputs.outputs.auth_method == 'aws'
+        # Works around the interactions of aws-actions/configure-aws-credentials with 4.x.x AWS TF provider.
+        # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
+        # to remove line setting the profile in our examples, or we see failures to initialize the provider.
+        run: |
+          set -x
+          mkdir -p ~/.aws
+          echo "[default]" > ~/.aws/credentials
+          echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
+          echo "aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" >> ~/.aws/credentials
+          # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
+          find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
+
+      - id: azure-login
+        name: Azure login
+        if: needs.validate-inputs.outputs.auth_method == 'azure'
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+
+      - id: test
+        name: "make test"
+        run: |
+          make test

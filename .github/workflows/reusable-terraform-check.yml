@@ -119,14 +119,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate-inputs
     steps:
-      - id: github-app-token
-        name: Create GitHub App Token
-        if: needs.validate-inputs.outputs.auth_github == 'true'
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ inputs.github_app_id }}
-          private-key: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
-
       - id: checkout
         name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -232,6 +224,15 @@ jobs:
           client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+
+      - id: github-app-token
+        name: Create GitHub App Token
+        if: needs.validate-inputs.outputs.auth_github == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ inputs.github_app_id }}
+          private-key: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
 
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"

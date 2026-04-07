@@ -223,6 +223,7 @@ jobs:
         with:
           app-id: ${{ inputs.github_app_id }}
           private-key: ${{ secrets.TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
 
       - name: Configure Mise
         id: configure-mise

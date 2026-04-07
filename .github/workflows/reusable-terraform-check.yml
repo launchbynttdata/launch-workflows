@@ -4,26 +4,37 @@ on:
   workflow_call:
     inputs:
       auth_method:
-        description: 'Authentication method to use for Terraform checks. Valid values are "none", "aws", and "azure".'
-        required: true
+        description: 'Comma-delimited list of authentication methods to use. Valid values are "aws", "azure", and "github" (e.g. "aws", "aws,github", "aws,azure"). Pass an empty string or omit to run Terraform checks without any authentication.'
+        required: false
+        default: ""
         type: string
-      assume_role_arn:
-        description: "ARN of the role to assume when running tests and creating test resources. Required if auth_method is 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN variable."
+      # --- AWS authentication inputs ---
+      aws_assume_role_arn:
+        description: "ARN of the role to assume when running tests and creating test resources. Required if auth_method includes 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN variable."
         required: false
         type: string
         default: "${{ vars.TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN }}"
-      region:
-        description: "AWS region to deploy when running tests and creating resources. Required if auth_method is 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_REGION variable."
+      aws_auth_region:
+        description: "AWS region to use for authentication. Required if auth_method includes 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_REGION variable."
         default: "${{ vars.TERRAFORM_CHECK_AWS_REGION }}"
         required: false
         type: string
+      # --- GitHub App authentication inputs ---
+      github_app_id:
+        description: "The GitHub App ID to use for authentication, defaulting to the TERRAFORM_CHECK_GITHUB_APP_ID variable. Required if auth_method includes 'github', ignored otherwise."
+        required: false
+        default: "${{ vars.TERRAFORM_CHECK_GITHUB_APP_ID }}"
+        type: string
     secrets:
-      # If using Azure authentication, these secrets must be provided. They are not required for the workflow itself to allow reuse in non-Azure contexts.
+      # --- Azure authentication secrets (required if auth_method includes 'azure') ---
       TERRAFORM_CHECK_AZURE_CLIENT_ID:
         required: false
       TERRAFORM_CHECK_AZURE_TENANT_ID:
         required: false
       TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID:
+        required: false
+      # --- GitHub App authentication secrets (required if auth_method includes 'github') ---
+      TERRAFORM_CHECK_GITHUB_APP_SECRET:
         required: false
 
 permissions:
@@ -36,49 +47,86 @@ jobs:
     name: "Validate Inputs"
     runs-on: ubuntu-latest
     outputs:
-      auth_method: ${{ steps.validate.outputs.auth_method }}
+      auth_aws: ${{ steps.validate.outputs.auth_aws }}
+      auth_azure: ${{ steps.validate.outputs.auth_azure }}
+      auth_github: ${{ steps.validate.outputs.auth_github }}
     steps:
       - name: Validate inputs and secrets
         id: validate
         shell: bash
         run: |
-          if [[ "${{ inputs.auth_method }}" != "none" && "${{ inputs.auth_method }}" != "aws" && "${{ inputs.auth_method }}" != "azure" ]]; then
-            echo "Error: Invalid auth_method input '${{ inputs.auth_method }}'. Valid values are 'none', 'aws', and 'azure'."
-            exit 1
-          fi
+          auth_aws=false
+          auth_azure=false
+          auth_github=false
 
-          if [[ "${{ inputs.auth_method }}" == "aws" ]]; then
-            if [[ -z "${{ inputs.assume_role_arn }}" ]]; then
-              echo "Error: assume_role_arn input is required when auth_method is 'aws'."
-              exit 1
-            fi
-            if [[ -z "${{ inputs.region }}" ]]; then
-              echo "Error: region input is required when auth_method is 'aws'."
-              exit 1
-            fi
-          fi
+          IFS=',' read -ra AUTH_METHODS <<< "${{ inputs.auth_method }}"
+          for method in "${AUTH_METHODS[@]}"; do
+            method=$(echo "$method" | xargs)
+            [[ -z "$method" ]] && continue
+            case "$method" in
+              # --- AWS authentication validation ---
+              aws)
+                auth_aws=true
+                if [[ -z "${{ inputs.aws_assume_role_arn }}" ]]; then
+                  echo "Error: aws_assume_role_arn input is required when auth_method includes 'aws'."
+                  exit 1
+                fi
+                if [[ -z "${{ inputs.aws_auth_region }}" ]]; then
+                  echo "Error: aws_auth_region input is required when auth_method includes 'aws'."
+                  exit 1
+                fi
+                ;;
+              # --- Azure authentication validation ---
+              azure)
+                auth_azure=true
+                if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_CLIENT_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_TENANT_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                ;;
+              # --- GitHub App authentication validation ---
+              github)
+                auth_github=true
+                if [[ -z "${{ inputs.github_app_id }}" ]]; then
+                  echo "Error: github_app_id input is required when auth_method includes 'github'."
+                  exit 1
+                fi
+                if [[ -z "${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}" ]]; then
+                  echo "Error: TERRAFORM_CHECK_GITHUB_APP_SECRET secret is required when auth_method includes 'github'."
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "Error: Invalid auth_method '$method'. Valid values are 'aws', 'azure', and 'github'."
+                exit 1
+                ;;
+            esac
+          done
 
-          if [[ "${{ inputs.auth_method }}" == "azure" ]]; then
-            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}" ]]; then
-              echo "Error: TERRAFORM_CHECK_AZURE_CLIENT_ID secret is required when auth_method is 'azure'."
-              exit 1
-            fi
-            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}" ]]; then
-              echo "Error: TERRAFORM_CHECK_AZURE_TENANT_ID secret is required when auth_method is 'azure'."
-              exit 1
-            fi
-            if [[ -z "${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}" ]]; then
-              echo "Error: TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID secret is required when auth_method is 'azure'."
-              exit 1
-            fi
-          fi
-
-          echo "auth_method=${{ inputs.auth_method }}" >> $GITHUB_OUTPUT
+          echo "auth_aws=$auth_aws" >> $GITHUB_OUTPUT
+          echo "auth_azure=$auth_azure" >> $GITHUB_OUTPUT
+          echo "auth_github=$auth_github" >> $GITHUB_OUTPUT
   check:
     name: "Run Tests"
     runs-on: ubuntu-latest
     needs: validate-inputs
     steps:
+      - id: github-app-token
+        name: Create GitHub App Token
+        if: needs.validate-inputs.outputs.auth_github == 'true'
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ inputs.github_app_id }}
+          private-key: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
+
       - id: checkout
         name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -109,12 +157,14 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          if [[ "${{ needs.validate-inputs.outputs.auth_method }}" == "aws" ]]; then
-            export AWS_REGION=${{ inputs.region }}
-          elif [[ "${{ needs.validate-inputs.outputs.auth_method }}" == "azure" ]]; then
+          if [[ "${{ needs.validate-inputs.outputs.auth_aws }}" == "true" ]]; then
+            export AWS_REGION=${{ inputs.aws_auth_region }}
+          elif [[ "${{ needs.validate-inputs.outputs.auth_azure }}" == "true" ]]; then
             export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
           fi
           make configure
+        env:
+          GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
 
       - id: save-cache
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
@@ -132,6 +182,7 @@ jobs:
           check_name: "Terraform Lint"
           status: "pending"
           description: "Terraform lint check is running..."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - id: lint
         name: "make lint"
@@ -146,19 +197,20 @@ jobs:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terraform lint ${{ steps.lint.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - id: configure-aws-credentials
         name: Configure AWS credentials
-        if: needs.validate-inputs.outputs.auth_method == 'aws'
+        if: needs.validate-inputs.outputs.auth_aws == 'true'
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:
-          role-to-assume: ${{ inputs.assume_role_arn }}
+          role-to-assume: ${{ inputs.aws_assume_role_arn }}
           role-session-name: ${{ github.run_id }}
-          aws-region: ${{ inputs.region }}
+          aws-region: ${{ inputs.aws_auth_region }}
 
       - id: create-aws-profile
         name: "Create AWS Profile"
-        if: needs.validate-inputs.outputs.auth_method == 'aws'
+        if: needs.validate-inputs.outputs.auth_aws == 'true'
         # Works around the interactions of aws-actions/configure-aws-credentials with 4.x.x AWS TF provider.
         # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
         # to remove line setting the profile in our examples, or we see failures to initialize the provider.
@@ -174,7 +226,7 @@ jobs:
 
       - id: azure-login
         name: Azure login
-        if: needs.validate-inputs.outputs.auth_method == 'azure'
+        if: needs.validate-inputs.outputs.auth_azure == 'true'
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
         with:
           client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
@@ -188,9 +240,12 @@ jobs:
           check_name: "Terraform Tests"
           status: "pending"
           description: "Terraform tests are running..."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - id: test
         name: "make test"
+        env:
+          GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
         run: |
           make test
 
@@ -202,3 +257,4 @@ jobs:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terraform tests ${{ steps.test.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

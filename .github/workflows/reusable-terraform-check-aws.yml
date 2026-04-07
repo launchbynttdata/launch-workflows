@@ -4,18 +4,19 @@ on:
   workflow_call:
     inputs:
       assume_role_arn:
-        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+        description: "ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so."
         required: true
         type: string
       region:
-        description: 'Region within the environment (e.g. us-east-1) to deploy'
-        default: 'us-east-2'
+        description: "Region within the environment (e.g. us-east-1) to deploy"
+        default: "us-east-2"
         required: true
         type: string
 
 permissions:
   id-token: write
   contents: read
+  statuses: write
 
 jobs:
   check:
@@ -26,7 +27,7 @@ jobs:
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
       - name: Setup asdf
-        # We use the 'setup' variant of this action, because we have some custom behavior in 
+        # We use the 'setup' variant of this action, because we have some custom behavior in
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
@@ -61,9 +62,25 @@ jobs:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
-      - name: "make lint"
+      - name: "Set Terraform Lint status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Lint"
+          status: "pending"
+          description: "Terraform lint check is running..."
+
+      - id: lint
+        name: "make lint"
         run: |
           make lint
+
+      - name: "Update Terraform Lint status"
+        if: always() && steps.lint.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Lint"
+          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform lint ${{ steps.lint.outcome }}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
@@ -86,6 +103,22 @@ jobs:
           # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
           find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
 
-      - name: "make test"
+      - name: "Set Terraform Tests status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Tests"
+          status: "pending"
+          description: "Terraform tests are running..."
+
+      - id: test
+        name: "make test"
         run: |
           make test
+
+      - name: "Update Terraform Tests status"
+        if: always() && steps.test.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Tests"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"

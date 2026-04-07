@@ -1,3 +1,8 @@
+> [!CAUTION]
+> Deprecation Notice
+>
+> This workflow will be deprecated with the 1.0.0 release of launch-workflows.
+
 # Check a Terraform Module in AWS
 
 Performs a series of checks of a Terraform module, including deploying the example modules to AWS.

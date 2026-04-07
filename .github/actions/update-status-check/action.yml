@@ -1,0 +1,65 @@
+name: "Update Status Check"
+description: "Use the GitHub Commit Status API to create or update a status check on a commit."
+inputs:
+  check_name:
+    description: "The name (context) of the status check to create or update."
+    required: true
+  status:
+    description: "The state to set on the status check. Must be one of: error, failure, pending, success."
+    required: true
+  sha:
+    description: "The commit SHA to attach the status check to. Defaults to the SHA that triggered the workflow."
+    required: false
+    default: ${{ github.sha }}
+  description:
+    description: "A short human-readable description of the status check."
+    required: false
+    default: ""
+  target_url:
+    description: "A URL to associate with the status check, typically a link to relevant build or run output."
+    required: false
+    default: ""
+  github_token:
+    description: "GitHub token for API access. Defaults to the automatic GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: "composite"
+  steps:
+    - name: Update Status Check
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        CHECK_NAME: ${{ inputs.check_name }}
+        STATUS: ${{ inputs.status }}
+        SHA: ${{ inputs.sha }}
+        DESCRIPTION: ${{ inputs.description }}
+        TARGET_URL: ${{ inputs.target_url }}
+      run: |
+        VALID_STATES=("error" "failure" "pending" "success")
+        VALID=false
+        for state in "${VALID_STATES[@]}"; do
+          if [[ "$STATUS" == "$state" ]]; then
+            VALID=true
+            break
+          fi
+        done
+
+        if [[ "$VALID" != "true" ]]; then
+          echo "Error: Invalid status '${STATUS}'. Must be one of: error, failure, pending, success."
+          exit 1
+        fi
+
+        echo "Setting status check '${CHECK_NAME}' to '${STATUS}' on commit ${SHA}..."
+
+        PAYLOAD=$(jq -n \
+          --arg state "$STATUS" \
+          --arg context "$CHECK_NAME" \
+          --arg description "$DESCRIPTION" \
+          --arg target_url "$TARGET_URL" \
+          '{state: $state, context: $context, description: $description, target_url: $target_url}')
+
+        gh api -X POST "repos/${{ github.repository }}/statuses/${SHA}" \
+          --input - <<< "$PAYLOAD"
+
+        echo "Status check '${CHECK_NAME}' successfully set to '${STATUS}'."

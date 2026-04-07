@@ -29,6 +29,7 @@ on:
 permissions:
   contents: read
   id-token: write # Required for various OIDC auth flows.
+  statuses: write
 
 jobs:
   validate-inputs:
@@ -124,10 +125,27 @@ jobs:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
+      - id: set-lint-pending
+        name: "Set Terraform Lint status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Lint"
+          status: "pending"
+          description: "Terraform lint check is running..."
+
       - id: lint
         name: "make lint"
         run: |
           make lint
+
+      - id: update-lint-status
+        name: "Update Terraform Lint status"
+        if: always() && steps.lint.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Lint"
+          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform lint ${{ steps.lint.outcome }}"
 
       - id: configure-aws-credentials
         name: Configure AWS credentials
@@ -163,7 +181,24 @@ jobs:
           tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
 
+      - id: set-tests-pending
+        name: "Set Terraform Tests status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Tests"
+          status: "pending"
+          description: "Terraform tests are running..."
+
       - id: test
         name: "make test"
         run: |
           make test
+
+      - id: update-tests-status
+        name: "Update Terraform Tests status"
+        if: always() && steps.test.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Terraform Tests"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"

@@ -39,7 +39,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # Required for various OIDC auth flows.
+  id-token: write
   statuses: write
 
 jobs:
@@ -236,6 +236,7 @@ jobs:
 
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"
+        continue-on-error: true
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Terraform Tests"
@@ -253,9 +254,32 @@ jobs:
       - id: update-tests-status
         name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
+        continue-on-error: true
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Terraform Tests"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      # Once we're fully on the new workflows, we can remove these steps:
+
+      - id: update-legacy-status-checks-aws
+        name: "Add AWS Legacy Status Check"
+        if: always() && startsWith(github.repository, 'tf-aws-')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - id: update-legacy-status-checks-azure
+        name: "Add Azure Legacy Status Check"
+        if: always() && startsWith(github.repository, 'tf-az')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terraform tests ${{ steps.test.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

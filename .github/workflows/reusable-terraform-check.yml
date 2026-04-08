@@ -114,8 +114,8 @@ jobs:
           echo "auth_aws=$auth_aws" >> $GITHUB_OUTPUT
           echo "auth_azure=$auth_azure" >> $GITHUB_OUTPUT
           echo "auth_github=$auth_github" >> $GITHUB_OUTPUT
-  check:
-    name: "Run Tests"
+  lint:
+    name: "Lint Module"
     runs-on: ubuntu-latest
     needs: validate-inputs
     steps:
@@ -190,6 +190,59 @@ jobs:
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terraform lint ${{ steps.lint.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  tests:
+    name: "Run Tests"
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: dependencies
+        name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: cache-restore
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: configure
+        name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          if [[ "${{ needs.validate-inputs.outputs.auth_aws }}" == "true" ]]; then
+            export AWS_REGION=${{ inputs.aws_auth_region }}
+          elif [[ "${{ needs.validate-inputs.outputs.auth_azure }}" == "true" ]]; then
+            export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+          fi
+          make configure
+        env:
+          GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
+
+      - id: save-cache
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        name: Cache asdf tools
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - id: configure-aws-credentials
         name: Configure AWS credentials
@@ -282,4 +335,32 @@ jobs:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terraform tests ${{ steps.test.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # These legacy status checks will write the necessary success for the existing launch workflows, so that we can transition
+  # between models without breaking merge capabilities on existing repositories. Once all repositories have transitioned to
+  # the new checks, we can remove this entire job.
+  legacy:
+    name: "Legacy Status Checks"
+    runs-on: ubuntu-latest
+    needs: [validate-inputs, lint, tests]
+    steps:
+      - id: update-legacy-status-checks-aws
+        name: "Add AWS Legacy Status Check"
+        if: startsWith(github.event.repository.name, 'tf-aws-')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
+          status: "pending"
+          description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - id: update-legacy-status-checks-azure
+        name: "Add Azure Legacy Status Check"
+        if: startsWith(github.event.repository.name, 'tf-az')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
+          status: "pending"
+          description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

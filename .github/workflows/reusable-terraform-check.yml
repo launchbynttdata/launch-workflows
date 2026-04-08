@@ -266,7 +266,7 @@ jobs:
 
       - id: update-legacy-status-checks-aws
         name: "Add AWS Legacy Status Check"
-        if: always() && startsWith(github.repository, 'tf-aws-')
+        if: always() && startsWith(github.event.repository.name, 'tf-aws-')
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
@@ -276,7 +276,7 @@ jobs:
 
       - id: update-legacy-status-checks-azure
         name: "Add Azure Legacy Status Check"
-        if: always() && startsWith(github.repository, 'tf-az')
+        if: always() && startsWith(github.event.repository.name, 'tf-az')
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"

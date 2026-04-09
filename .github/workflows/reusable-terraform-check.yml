@@ -254,7 +254,7 @@ jobs:
       - id: create-aws-profile
         name: "Create AWS Profile"
         if: needs.validate-inputs.outputs.auth_aws == 'true'
-        # Works around the interactions of aws-actions/configure-aws-credentials with 4.x.x AWS TF provider.
+        # Works around the interactions of aws-actions/configure-aws-credentials with 5.x.x AWS TF provider.
         # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
         # to remove line setting the profile in our examples, or we see failures to initialize the provider.
         run: |
@@ -327,7 +327,7 @@ jobs:
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
-          status: "pending"
+          status: "success"
           description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -337,6 +337,6 @@ jobs:
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
-          status: "pending"
+          status: "success"
           description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

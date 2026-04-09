@@ -295,6 +295,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
         run: |
+          make tfmodule/create_example_providers
           find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c "echo {}; cat {}" \;
           make test
 

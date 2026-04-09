@@ -149,11 +149,6 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          if [[ "${{ needs.validate-inputs.outputs.auth_aws }}" == "true" ]]; then
-            export AWS_REGION=${{ inputs.aws_auth_region }}
-          elif [[ "${{ needs.validate-inputs.outputs.auth_azure }}" == "true" ]]; then
-            export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
-          fi
           make configure
 
       - id: save-cache
@@ -300,6 +295,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
         run: |
+          find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c "echo {}; cat {}" \;
           make test
 
       - id: update-tests-status

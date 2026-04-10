@@ -162,3 +162,21 @@ jobs:
           if [ "${{ steps.find-comment.outputs.comment-id }}" != "" ]; then
             gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent
           fi
+
+      - id: set-status-check
+        name: Set Legacy Check
+        if: ${{ inputs.comment_on_failure }}
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Conventional Commit PR Title"
+          status: ${{ steps.pr-validation.outcome == 'success' && 'success' || steps.pr-validation.outcome == 'failure' && 'failure' || 'error' }}
+          description: ${{ steps.pr-validation.outcome == 'success' && 'PR title is valid.' || steps.pr-validation.outcome == 'failure' && 'PR title is invalid.' || 'Error validating PR title.' }}
+
+      - id: set-status-check-legacy
+        name: Set Legacy Check
+        if: ${{ inputs.comment_on_failure }}
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        with:
+          check_name: "Label Pull Request / Label Pull Request"
+          status: ${{ steps.pr-validation.outcome == 'success' && 'success' || steps.pr-validation.outcome == 'failure' && 'failure' || 'error' }}
+          description: ${{ steps.pr-validation.outcome == 'success' && 'PR title is valid.' || steps.pr-validation.outcome == 'failure' && 'PR title is invalid.' || 'Error validating PR title.' }}

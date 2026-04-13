@@ -165,7 +165,7 @@ jobs:
           fi
 
       - id: set-status-check
-        name: Set Legacy Check
+        name: Set Status Check
         if: ${{ inputs.comment_on_failure }}
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
         with:

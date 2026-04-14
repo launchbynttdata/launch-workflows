@@ -68,7 +68,7 @@ jobs:
 
           if [ "$PRERELEASE" == "true" ]; then
             echo "Using prerelease versions of skeleton workflows ($COPIER_CMD)"
-            uv run copier $COPIER_CMD $COPIER_FLAGS --prerelease
+            uv run copier $COPIER_CMD $COPIER_FLAGS --prereleases
           else
             echo "Using stable versions of skeleton workflows ($COPIER_CMD)"
             uv run copier $COPIER_CMD $COPIER_FLAGS

@@ -1,0 +1,26 @@
+name: Dependabot Auto-Merge
+
+on:
+  workflow_call:
+    inputs:
+      # No inputs needed for this workflow, but we need to define at least one to make it callable.
+      placeholder:
+        type: string
+        required: false
+        default: ""
+        description: "This input is not used, but is required to make this workflow callable."
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot-automerge:
+    name: Dependabot Auto-Merge
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Enable auto-merge
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

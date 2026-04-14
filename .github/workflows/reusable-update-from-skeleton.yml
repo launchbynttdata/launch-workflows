@@ -1,0 +1,211 @@
+name: Update Repository from Skeleton
+
+on:
+  workflow_call:
+    inputs:
+      recopy:
+        description: "Perform a full recopy instead of an incremental update (overwrites all templated files), and re-runs any tasks defined in copier.yml. The resulting PR will require manual review and merging."
+        type: boolean
+        default: false
+      skeleton_update_app_id:
+        description: "The GitHub App ID of the app to use for authentication when pushing updates. The app must be installed on the repository and have permissions to read and write code, as well as create pull requests."
+        required: false
+        type: string
+        default: ${{ vars.LAUNCH_SKELETON_UPDATE_APP_ID }}
+    secrets:
+      LAUNCH_SKELETON_UPDATE_KEY:
+        description: "The private key for the GitHub App used for authentication when pushing updates. The app must be installed on the repository and have permissions to read and write code, as well as create pull requests."
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-from-skeleton:
+    name: Update from Skeleton
+    runs-on: ubuntu-latest
+    steps:
+      - id: get-app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ inputs.skeleton_update_app_id }}
+          private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}
+
+      - id: checkout
+        name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          token: ${{ steps.get-app-token.outputs.token }}
+
+      - id: setup-python
+        name: Set up Python 3.14
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: 3.14
+
+      - id: install-tools
+        name: Install Tools with uv
+        run: |
+          uv tool install copier
+          uv tool install pre-commit --with pre-commit-uv
+
+      - id: get-repo-custom-properties
+        name: Get Repository Custom Properties
+        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@feat/prerelease-on-merge
+
+      - id: run-updates
+        name: Run Updates from Skeleton
+        run: |
+          PRERELEASE=$(echo '${{ steps.get-repo-custom-properties.outputs.properties }}' | jq -r '.[] | select(.property_name == "prerelease") | .value')
+
+          COPIER_CMD="update"
+          COPIER_FLAGS="--defaults --trust"
+          if [ "${{ inputs.recopy }}" == "true" ]; then
+            COPIER_CMD="recopy"
+            COPIER_FLAGS="$COPIER_FLAGS --overwrite"
+          fi
+
+          if [ "$PRERELEASE" == "true" ]; then
+            echo "Using prerelease versions of skeleton workflows ($COPIER_CMD)"
+            uv run copier $COPIER_CMD $COPIER_FLAGS --prerelease
+          else
+            echo "Using stable versions of skeleton workflows ($COPIER_CMD)"
+            uv run copier $COPIER_CMD $COPIER_FLAGS
+          fi
+
+          if git diff --quiet; then
+            echo "No changes detected"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Changes detected"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            if [ ! -f .pre-commit-config.yaml ]; then
+              echo "No .pre-commit-config.yaml found, skipping pre-commit validation"
+              echo "pre_commit_passed=false" >> "$GITHUB_OUTPUT"
+              {
+                echo "PRE_COMMIT_OUTPUT<<__PRECOMMIT_EOF__"
+                echo "No .pre-commit-config.yaml found in repository. Pre-commit validation was skipped."
+                echo "__PRECOMMIT_EOF__"
+              } >> "$GITHUB_ENV"
+            else
+              PRE_COMMIT_LOG=$(mktemp)
+              set -o pipefail
+              if ! pre-commit run check-merge-conflict --all-files 2>&1 | tee "$PRE_COMMIT_LOG"; then
+                PRE_COMMIT_OUTPUT=$(cat "$PRE_COMMIT_LOG")
+                rm -f "$PRE_COMMIT_LOG"
+
+                echo "Pre-commit checks failed"
+                echo "pre_commit_passed=false" >> "$GITHUB_OUTPUT"
+
+                CONFLICT_FILES=$(echo "$PRE_COMMIT_OUTPUT" | grep ': Merge conflict' | sed 's/:[0-9]*: Merge conflict.*//' | sort -u) || true
+
+                {
+                  echo "PRE_COMMIT_OUTPUT<<__PRECOMMIT_EOF__"
+                  echo "$PRE_COMMIT_OUTPUT"
+                  echo "__PRECOMMIT_EOF__"
+                } >> "$GITHUB_ENV"
+
+                if [ -n "$CONFLICT_FILES" ]; then
+                  {
+                    echo "CONFLICT_FILES<<__CONFLICTS_EOF__"
+                    echo "$CONFLICT_FILES"
+                    echo "__CONFLICTS_EOF__"
+                  } >> "$GITHUB_ENV"
+                fi
+              else
+                rm -f "$PRE_COMMIT_LOG"
+                echo "Pre-commit checks passed"
+                echo "pre_commit_passed=true" >> "$GITHUB_OUTPUT"
+              fi
+            fi
+          fi
+
+      - name: Commit and Push Changes
+        id: commit-and-push
+        if: steps.run-updates.outputs.has_changes == 'true'
+        run: |
+          USER_ID=$(gh api "/users/${{ steps.get-app-token.outputs.app-slug }}[bot]" --jq .id)
+
+          git config --global user.name '${{ steps.get-app-token.outputs.app-slug }}[bot]'
+          git config --global user.email "$USER_ID+${{ steps.get-app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+
+          BRANCH_NAME="patch/skeleton-update-$(date +%Y%m%d-%H%M%S)"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+          git checkout -b "$BRANCH_NAME"
+          git add .
+
+          if [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ] && [ "${{ inputs.recopy }}" != "true" ]; then
+            git commit -m "chore: update from skeleton"
+          else
+            git commit -m "fix: update from skeleton"
+          fi
+
+          git push origin "$BRANCH_NAME"
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+
+      - name: Create Pull Request
+        if: steps.run-updates.outputs.has_changes == 'true' && steps.run-updates.outputs.pre_commit_passed == 'true' && inputs.recopy != true
+        run: |
+          PR_BODY=$(cat <<'EOF'
+          Automated update from skeleton template.
+
+          No conflicting changes were detected from the base repository.
+          EOF
+          )
+          PR_URL=$(gh pr create \
+            --base main \
+            --head "${{ steps.commit-and-push.outputs.branch_name }}" \
+            --title "chore: update from skeleton" \
+            --body "$PR_BODY")
+          gh pr merge "${{ steps.commit-and-push.outputs.branch_name }}" --auto --squash
+          echo "### ✅ Pull Request Created" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "$PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Auto-merge has been enabled." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+
+      - name: Create Pull Request (requires review)
+        if: steps.run-updates.outputs.has_changes == 'true' && (steps.run-updates.outputs.pre_commit_passed == 'false' || inputs.recopy == true)
+        run: |
+          if [ "${{ inputs.recopy }}" == "true" ] && [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ]; then
+            PR_BODY=$(cat <<'EOF'
+          Automated recopy from skeleton template.
+
+          All templated files have been overwritten. Please review the changes carefully before merging.
+          EOF
+            )
+          else
+            PR_BODY=$(cat <<EOF
+          Automated update from skeleton template.
+
+          ⚠️ Problems occurred during pre-commit validation. Manual review and conflict resolution may be required before merging.
+
+          Pre-commit output:
+          $(echo "$PRE_COMMIT_OUTPUT" | sed 's/^/> /')
+          EOF
+            )
+
+            if [ -n "$CONFLICT_FILES" ]; then
+              CONFLICT_LIST=$(echo "$CONFLICT_FILES" | sed 's/^/- `/' | sed 's/$/`/')
+              PR_BODY="${PR_BODY}
+
+          The following files contain merge conflict markers:
+          ${CONFLICT_LIST}"
+            fi
+          fi
+          PR_URL=$(gh pr create \
+            --base main \
+            --head "${{ steps.commit-and-push.outputs.branch_name }}" \
+            --title "fix: update from skeleton" \
+            --body "$PR_BODY")
+          echo "### ⚠️ Pull Request Created (requires review)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "$PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "This PR requires manual review before merging." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}

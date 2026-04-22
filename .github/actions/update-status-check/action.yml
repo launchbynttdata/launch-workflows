@@ -39,7 +39,19 @@ runs:
         SHA: ${{ inputs.sha }}
         DESCRIPTION: ${{ inputs.description }}
         TARGET_URL: ${{ inputs.target_url }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
+        # For pull request events, resolve the actual head SHA via the API.
+        # github.sha on PR events points to a temporary merge commit that
+        # doesn't appear on the PR, so status checks set on it are invisible.
+        if [[ -n "$PR_NUMBER" ]]; then
+          PR_HEAD_SHA=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}" --jq '.head.sha' 2>/dev/null || true)
+          if [[ -n "$PR_HEAD_SHA" ]]; then
+            echo "Resolved PR #${PR_NUMBER} head SHA: ${PR_HEAD_SHA} (input was: ${SHA})"
+            SHA="$PR_HEAD_SHA"
+          fi
+        fi
+
         VALID_STATES=("error" "failure" "pending" "success")
         VALID=false
         for state in "${VALID_STATES[@]}"; do

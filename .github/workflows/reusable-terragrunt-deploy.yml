@@ -4,23 +4,31 @@ on:
   workflow_call:
     inputs:
       auth_method:
-        description: 'Comma-delimited list of authentication methods to use. Valid values are "aws", "azure", and "github" (e.g. "aws", "aws,github", "aws,azure"). Pass an empty string or omit to run Terragrunt without any authentication.'
+        description: "Comma-delimited list of authentication methods to use. Valid
+          values are \"aws\", \"azure\", and \"github\" (e.g. \"aws\",
+          \"aws,github\", \"aws,azure\"). Pass an empty string or omit to run
+          Terragrunt without any authentication."
         required: false
         default: ""
         type: string
       # --- AWS authentication inputs ---
       aws_auth_region:
-        description: "The AWS region to use for authentication. Required if auth_method includes 'aws', ignored otherwise."
+        description: "The AWS region to use for authentication. Required if auth_method
+          includes 'aws', ignored otherwise."
         required: false
         type: string
       aws_assume_role_arn:
-        description: "ARN of the role to assume prior to Terragrunt invocation, defaulting to the DEPLOY_ROLE_ARN variable. Required if auth_method includes 'aws', ignored otherwise."
+        description: "ARN of the role to assume prior to Terragrunt invocation,
+          defaulting to the DEPLOY_ROLE_ARN variable. Required if auth_method
+          includes 'aws', ignored otherwise."
         required: false
         default: "${{ vars.DEPLOY_ROLE_ARN }}"
         type: string
       # --- GitHub App authentication inputs ---
       github_app_id:
-        description: "The GitHub App ID to use for authentication, defaulting to the TERRAGRUNT_DEPLOY_GITHUB_APP_ID variable. Required if auth_method includes 'github', ignored otherwise."
+        description: "The GitHub App ID to use for authentication, defaulting to the
+          TERRAGRUNT_DEPLOY_GITHUB_APP_ID variable. Required if auth_method
+          includes 'github', ignored otherwise."
         required: false
         default: "${{ vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID }}"
         type: string
@@ -43,7 +51,8 @@ on:
         required: false
         type: string
       tg_dir:
-        description: "Folder containing the Terragrunt configuration to deploy (relative to the repository root, e.g. platform/test/us-east-1/000)"
+        description: "Folder containing the Terragrunt configuration to deploy (relative
+          to the repository root, e.g. platform/test/us-east-1/000)"
         required: true
         type: string
       before_plan_commands:
@@ -57,7 +66,8 @@ on:
         type: string
         default: ""
       before_shared_commands:
-        description: "Commands to run prior to both Terragrunt plan and apply. These are applied after before_plan_commands and before_deploy_commands."
+        description: "Commands to run prior to both Terragrunt plan and apply. These are
+          applied after before_plan_commands and before_deploy_commands."
         required: false
         type: string
         default: ""
@@ -72,13 +82,15 @@ on:
         type: string
         default: ""
       after_shared_commands:
-        description: "Commands to run after both Terragrunt plan and apply. These are applied after after_plan_commands and after_deploy_commands."
+        description: "Commands to run after both Terragrunt plan and apply. These are
+          applied after after_plan_commands and after_deploy_commands."
         required: false
         type: string
         default: ""
     outputs:
       terraform_outputs:
-        description: "JSON string containing all Terraform outputs from the deployment (base64 encoded)"
+        description: "JSON string containing all Terraform outputs from the deployment
+          (base64 encoded)"
         value: ${{ jobs.deploy.outputs.terraform_outputs }}
     secrets:
       # --- Azure authentication secrets (required if auth_method includes 'azure') ---
@@ -233,12 +245,13 @@ jobs:
           tg_version: ${{ inputs.tg_version }}
 
       - name: "Set Terragrunt Plan status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Plan (${{ inputs.tg_dir }})"
           status: "pending"
           description: "Terragrunt plan is running..."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - name: Plan
         id: plan
@@ -259,7 +272,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
-          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true' || '' }}
+          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true'
+            || '' }}
           TF_VAR_system_tags: ${{ steps.set-tags-azure.outputs.SYSTEM_TAGS }}
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || '' }}
         with:
@@ -270,20 +284,23 @@ jobs:
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Plan (${{ inputs.tg_dir }})"
-          status: ${{ steps.plan.outcome == 'success' && 'success' || steps.plan.outcome == 'failure' && 'failure' || 'error' }}
+          status: ${{ steps.plan.outcome == 'success' && 'success' || steps.plan.outcome
+            == 'failure' && 'failure' || 'error' }}
           description: "Terragrunt plan ${{ steps.plan.outcome }}"
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - name: "Set Terragrunt Deploy status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Deploy (${{ inputs.tg_dir }})"
           status: "pending"
           description: "Terragrunt deploy is running..."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - name: Deploy
         id: deploy
@@ -304,7 +321,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
-          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true' || '' }}
+          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true'
+            || '' }}
           TF_VAR_system_tags: ${{ steps.set-tags-azure.outputs.SYSTEM_TAGS }}
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || '' }}
         with:
@@ -315,12 +333,14 @@ jobs:
 
       - name: "Update Terragrunt Deploy status"
         if: always() && steps.deploy.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Deploy (${{ inputs.tg_dir }})"
-          status: ${{ steps.deploy.outcome == 'success' && 'success' || steps.deploy.outcome == 'failure' && 'failure' || 'error' }}
+          status: ${{ steps.deploy.outcome == 'success' && 'success' ||
+            steps.deploy.outcome == 'failure' && 'failure' || 'error' }}
           description: "Terragrunt deploy ${{ steps.deploy.outcome }}"
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - name: Get Terraform Outputs
         id: set-outputs
@@ -329,7 +349,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
-          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true' || '' }}
+          ARM_USE_OIDC: ${{ needs.validate-inputs.outputs.auth_azure == 'true' && 'true'
+            || '' }}
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || '' }}
         run: |
           echo "=== Getting Terraform outputs ==="

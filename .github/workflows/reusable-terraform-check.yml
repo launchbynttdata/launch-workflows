@@ -4,24 +4,34 @@ on:
   workflow_call:
     inputs:
       auth_method:
-        description: 'Comma-delimited list of authentication methods to use. Valid values are "aws", "azure", and "github" (e.g. "aws", "aws,github", "aws,azure"). Pass an empty string or omit to run Terraform checks without any authentication.'
+        description: "Comma-delimited list of authentication methods to use. Valid
+          values are \"aws\", \"azure\", and \"github\" (e.g. \"aws\",
+          \"aws,github\", \"aws,azure\"). Pass an empty string or omit to run
+          Terraform checks without any authentication."
         required: false
         default: ""
         type: string
       # --- AWS authentication inputs ---
       aws_assume_role_arn:
-        description: "ARN of the role to assume when running tests and creating test resources. Required if auth_method includes 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN variable."
+        description: "ARN of the role to assume when running tests and creating test
+          resources. Required if auth_method includes 'aws', ignored otherwise.
+          Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN
+          variable."
         required: false
         type: string
         default: "${{ vars.TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN }}"
       aws_auth_region:
-        description: "AWS region to use for authentication. Required if auth_method includes 'aws', ignored otherwise. Defaults to the value of the TERRAFORM_CHECK_AWS_REGION variable."
+        description: "AWS region to use for authentication. Required if auth_method
+          includes 'aws', ignored otherwise. Defaults to the value of the
+          TERRAFORM_CHECK_AWS_REGION variable."
         default: "${{ vars.TERRAFORM_CHECK_AWS_REGION }}"
         required: false
         type: string
       # --- GitHub App authentication inputs ---
       github_app_id:
-        description: "The GitHub App ID to use for authentication, defaulting to the TERRAFORM_CHECK_GITHUB_APP_ID variable. Required if auth_method includes 'github', ignored otherwise."
+        description: "The GitHub App ID to use for authentication, defaulting to the
+          TERRAFORM_CHECK_GITHUB_APP_ID variable. Required if auth_method
+          includes 'github', ignored otherwise."
         required: false
         default: "${{ vars.TERRAFORM_CHECK_GITHUB_APP_ID }}"
         type: string
@@ -162,12 +172,13 @@ jobs:
 
       - id: set-lint-pending
         name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terraform Lint"
           status: "pending"
           description: "Terraform lint check is running..."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - id: lint
         name: "make lint"
@@ -177,12 +188,14 @@ jobs:
       - id: update-lint-status
         name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terraform Lint"
-          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome == 'failure' && 'failure' || 'error' }}
+          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
+            == 'failure' && 'failure' || 'error' }}
           description: "Terraform lint ${{ steps.lint.outcome }}"
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
   tests:
     name: "Run Tests"
@@ -283,12 +296,13 @@ jobs:
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terraform Tests"
           status: "pending"
           description: "Terraform tests are running..."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - id: test
         name: "make test"
@@ -304,12 +318,14 @@ jobs:
         name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terraform Tests"
-          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome == 'failure' && 'failure' || 'error' }}
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
+            == 'failure' && 'failure' || 'error' }}
           description: "Terraform tests ${{ steps.test.outcome }}"
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
   # These legacy status checks will write the necessary success for the existing launch workflows, so that we can transition
   # between models without breaking merge capabilities on existing repositories. Once all repositories have transitioned to
@@ -317,24 +333,28 @@ jobs:
   legacy:
     name: "Legacy Status Checks"
     runs-on: ubuntu-latest
-    needs: [validate-inputs, lint, tests]
+    needs: [ validate-inputs, lint, tests ]
     steps:
       - id: update-legacy-status-checks-aws
         name: "Add AWS Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-aws-')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
           status: "success"
-          description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          description: "This check is being deprecated. Please refer to the new 'Terraform
+            Tests' check for test results."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
 
       - id: update-legacy-status-checks-azure
         name: "Add Azure Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-az')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-terraform-check-workflows
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: "success"
-          description: "This check is being deprecated. Please refer to the new 'Terraform Tests' check for test results."
-          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          description: "This check is being deprecated. Please refer to the new 'Terraform
+            Tests' check for test results."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"

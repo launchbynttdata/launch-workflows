@@ -1,22 +1,26 @@
 name: "Update Status Check"
-description: "Use the GitHub Commit Status API to create or update a status check on a commit."
+description: "Use the GitHub Commit Status API to create or update a status
+  check on a commit."
 inputs:
   check_name:
     description: "The name (context) of the status check to create or update."
     required: true
   status:
-    description: "The state to set on the status check. Must be one of: error, failure, pending, success."
+    description: "The state to set on the status check. Must be one of: error,
+      failure, pending, success."
     required: true
   sha:
-    description: "The commit SHA to attach the status check to. Defaults to the SHA that triggered the workflow."
+    description: "The commit SHA to attach the status check to. Defaults to the PR
+      head SHA if available, otherwise the SHA that triggered the workflow."
     required: false
-    default: ${{ github.sha }}
+    default: ${{ github.event.pull_request.head.sha || github.sha }}
   description:
     description: "A short human-readable description of the status check."
     required: false
     default: ""
   target_url:
-    description: "A URL to associate with the status check, typically a link to relevant build or run output."
+    description: "A URL to associate with the status check, typically a link to
+      relevant build or run output."
     required: false
     default: ""
   github_token:

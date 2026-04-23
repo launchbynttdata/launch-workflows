@@ -17,7 +17,9 @@ on:
         default: "0.54.11"
         type: string
       assume_role_arn:
-        description: "ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so."
+        description: "ARN of the role to assume prior to Terragrunt invocation.
+          Terragrunt may use this role to assume other roles if configured to do
+          so."
         required: true
         type: string
       region:
@@ -74,7 +76,7 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.14.2
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@feat/unify-provider-auth
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
@@ -95,5 +97,6 @@ jobs:
         with:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{
+            inputs.env_id }}"
           tg_command: "destroy"

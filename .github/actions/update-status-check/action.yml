@@ -78,4 +78,4 @@ runs:
         gh api -X POST "repos/${{ github.repository }}/statuses/${SHA}" \
           --input - <<< "$PAYLOAD"
 
-        echo "Status check '${CHECK_NAME}' successfully set to '${STATUS}'."
+        echo "\nStatus check '${CHECK_NAME}' successfully set to '${STATUS}'."

@@ -4,17 +4,23 @@ on:
   workflow_call:
     inputs:
       recopy:
-        description: "Perform a full recopy instead of an incremental update (overwrites all templated files), and re-runs any tasks defined in copier.yml. The resulting PR will require manual review and merging."
+        description: "Perform a full recopy instead of an incremental update (overwrites
+          all templated files), and re-runs any tasks defined in copier.yml. The
+          resulting PR will require manual review and merging."
         type: boolean
         default: false
       skeleton_update_app_id:
-        description: "The GitHub App ID of the app to use for authentication when pushing updates. The app must be installed on the repository and have permissions to read and write code, as well as create pull requests."
+        description: "The GitHub App ID of the app to use for authentication when
+          pushing updates. The app must be installed on the repository and have
+          permissions to read and write code, as well as create pull requests."
         required: false
         type: string
         default: ${{ vars.LAUNCH_SKELETON_UPDATE_APP_ID }}
     secrets:
       LAUNCH_SKELETON_UPDATE_KEY:
-        description: "The private key for the GitHub App used for authentication when pushing updates. The app must be installed on the repository and have permissions to read and write code, as well as create pull requests."
+        description: "The private key for the GitHub App used for authentication when
+          pushing updates. The app must be installed on the repository and have
+          permissions to read and write code, as well as create pull requests."
         required: true
 
 permissions:
@@ -77,9 +83,15 @@ jobs:
           if git diff --quiet; then
             echo "No changes detected"
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "### ✅ No Updates Available" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "The repository is already up to date with the skeleton template." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Changes detected"
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔄 Updates Available" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Changes were detected from the skeleton template. A pull request will be created." >> "$GITHUB_STEP_SUMMARY"
             if [ ! -f .pre-commit-config.yaml ]; then
               echo "No .pre-commit-config.yaml found, skipping pre-commit validation"
               echo "pre_commit_passed=false" >> "$GITHUB_OUTPUT"
@@ -146,7 +158,9 @@ jobs:
           GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
 
       - name: Create Pull Request
-        if: steps.run-updates.outputs.has_changes == 'true' && steps.run-updates.outputs.pre_commit_passed == 'true' && inputs.recopy != true
+        if: steps.run-updates.outputs.has_changes == 'true' &&
+          steps.run-updates.outputs.pre_commit_passed == 'true' && inputs.recopy
+          != true
         run: |
           PR_BODY=$(cat <<'EOF'
           Automated update from skeleton template.
@@ -169,7 +183,9 @@ jobs:
           GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
 
       - name: Create Pull Request (requires review)
-        if: steps.run-updates.outputs.has_changes == 'true' && (steps.run-updates.outputs.pre_commit_passed == 'false' || inputs.recopy == true)
+        if: steps.run-updates.outputs.has_changes == 'true' &&
+          (steps.run-updates.outputs.pre_commit_passed == 'false' ||
+          inputs.recopy == true)
         run: |
           if [ "${{ inputs.recopy }}" == "true" ] && [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ]; then
             PR_BODY=$(cat <<'EOF'

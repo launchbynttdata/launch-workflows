@@ -23,7 +23,7 @@ This action will:
 
 ### Basic Usage
 
-When used in a `pull_request` event workflow, all inputs are optional:
+When used in a `pull_request` event workflow, all inputs are optional (replacing `ref` with a tag or commit SHA from this repository):
 
 ```yaml
 jobs:
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Remove Dependabot Labels
-        uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@main
+        uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@ref
 ```
 
 ### Preserve Additional Labels
@@ -45,7 +45,7 @@ To preserve additional Dependabot labels beyond `dependencies`:
 
 ```yaml
 - name: Remove Dependabot Labels
-  uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@main
+  uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@ref
   with:
     preserve_labels: "dependencies,security"
 ```
@@ -56,7 +56,7 @@ If running outside a `pull_request` event context, provide the PR number explici
 
 ```yaml
 - name: Remove Dependabot Labels
-  uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@main
+  uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@ref
   with:
     pr_number: "123"
 ```

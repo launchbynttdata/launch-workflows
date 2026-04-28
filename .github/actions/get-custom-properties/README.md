@@ -26,7 +26,7 @@ This action will:
 
 ### Basic Usage
 
-When used in a workflow, all inputs are optional. The action defaults to the current repository and automatic GITHUB_TOKEN:
+When used in a workflow, all inputs are optional. The action defaults to the current repository and automatic GITHUB_TOKEN (replacing `ref` with a tag or commit SHA from this repository):
 
 ```yaml
 jobs:
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Get Custom Properties
         id: props
-        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@main
+        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@ref
 
       - name: Use Properties
         run: |
@@ -49,7 +49,7 @@ To retrieve properties from a different repository:
 ```yaml
 - name: Get Custom Properties
   id: props
-  uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@main
+  uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@ref
   with:
     owner: "my-org"
     repo: "my-repo"
@@ -62,7 +62,7 @@ You can use `jq` to parse specific properties from the output:
 ```yaml
 - name: Get Custom Properties
   id: props
-  uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@main
+  uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@ref
 
 - name: Check Environment Property
   run: |

@@ -80,7 +80,7 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-misefeat/unify-provider-auth
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}

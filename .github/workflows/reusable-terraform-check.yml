@@ -182,7 +182,7 @@ jobs:
 
       - id: set-lint-pending
         name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -198,7 +198,7 @@ jobs:
       - id: update-lint-status
         name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -309,7 +309,7 @@ jobs:
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -331,7 +331,7 @@ jobs:
         name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
@@ -351,7 +351,7 @@ jobs:
       - id: update-legacy-status-checks-aws
         name: "Add AWS Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-aws-')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
           status: "success"
@@ -363,7 +363,7 @@ jobs:
       - id: update-legacy-status-checks-azure
         name: "Add Azure Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-az')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-checkfeat/unify-provider-auth
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: "success"

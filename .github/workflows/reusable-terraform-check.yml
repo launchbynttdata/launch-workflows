@@ -239,8 +239,6 @@ jobs:
             export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
           fi
           make configure
-        env:
-          GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
 
       - id: save-cache
         uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306

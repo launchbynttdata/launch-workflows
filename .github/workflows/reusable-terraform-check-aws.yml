@@ -54,7 +54,6 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          export AWS_REGION="$AWS_REGION"
           make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306

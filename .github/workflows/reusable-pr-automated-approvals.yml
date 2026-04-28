@@ -140,8 +140,6 @@ jobs:
             --repo "${{ github.repository }}" \
             --approve \
             --body "Automated approval: all commits from trusted automation accounts."
-        env:
-          GH_TOKEN: ${{ steps.approver-alpha-token.outputs.token }}
 
       - name: Revoke Approvals
         if: steps.check-pull-request.outputs.should_approve == 'false'

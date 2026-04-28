@@ -40,7 +40,7 @@ jobs:
 
       - id: checkout
         name: Checkout Repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
         with:
           token: ${{ steps.get-app-token.outputs.token }}
 
@@ -80,7 +80,7 @@ jobs:
             uv run copier $COPIER_CMD $COPIER_FLAGS
           fi
 
-          if git diff --quiet; then
+          if [[ -z "$(git status --porcelain)" ]]; then
             echo "No changes detected"
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             echo "### ✅ No Updates Available" >> "$GITHUB_STEP_SUMMARY"

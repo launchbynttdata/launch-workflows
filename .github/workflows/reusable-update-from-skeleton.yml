@@ -33,14 +33,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: get-app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
         with:
           app-id: ${{ inputs.skeleton_update_app_id }}
           private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}
 
       - id: checkout
         name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           token: ${{ steps.get-app-token.outputs.token }}
 
@@ -58,7 +58,7 @@ jobs:
 
       - id: get-repo-custom-properties
         name: Get Repository Custom Properties
-        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@feat/prerelease-on-merge
+        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@0.15.0
 
       - id: run-updates
         name: Run Updates from Skeleton

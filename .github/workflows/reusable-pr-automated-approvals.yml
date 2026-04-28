@@ -8,7 +8,8 @@ on:
         type: string
         required: false
         default: ""
-        description: "This input is not used, but is required to make this workflow callable."
+        description: "This input is not used, but is required to make this workflow
+          callable."
 
 permissions:
   pull-requests: read
@@ -18,7 +19,8 @@ jobs:
   approvals:
     name: Update Automated Approvals
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' || github.actor == 'launch-skeleton-auto-updater[bot]' }}
+    if: ${{ github.actor == 'dependabot[bot]' || github.actor ==
+      'launch-skeleton-auto-updater[bot]' }}
     steps:
       - name: Check Pull Request
         id: check-pull-request
@@ -55,14 +57,14 @@ jobs:
 
       - name: Get Approver Alpha Token
         id: approver-alpha-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
         with:
           app-id: ${{ vars.LAUNCH_APPROVER_ALPHA_ID }}
           private-key: ${{ secrets.LAUNCH_APPROVER_ALPHA_KEY }}
 
       - name: Get Approver Bravo Token
         id: approver-bravo-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
         with:
           app-id: ${{ vars.LAUNCH_APPROVER_BRAVO_ID }}
           private-key: ${{ secrets.LAUNCH_APPROVER_BRAVO_KEY }}

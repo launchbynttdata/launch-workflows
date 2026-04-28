@@ -29,7 +29,7 @@ jobs:
 
       # Ensure mise.toml contains terraform and terragrunt at our desired versions
       - name: Configure Mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
         with:
           tf_version: '1.5.5'
           tg_version: '0.54.11'

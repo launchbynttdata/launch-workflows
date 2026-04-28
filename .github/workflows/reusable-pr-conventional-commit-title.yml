@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate inputs
-        uses: actions/github-script@v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             const taskTypes = `${{ inputs.task_types }}`;
@@ -161,7 +161,7 @@ jobs:
       - name: Find previous failure comment
         id: find-comment
         if: ${{ always() && inputs.comment_on_failure }}
-        uses: peter-evans/find-comment@v4
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-author: github-actions[bot]
@@ -170,7 +170,7 @@ jobs:
       - name: Comment on Failure
         if: ${{ failure() && steps.pr-validation.outcome == 'failure' &&
           inputs.comment_on_failure }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9
         with:
           issue-number: ${{ github.event.pull_request.number }}
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
@@ -190,7 +190,7 @@ jobs:
       - id: set-status-check
         name: Set Status Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Conventional Commit PR Title"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||
@@ -202,7 +202,7 @@ jobs:
       - id: set-status-check-legacy
         name: Set Legacy Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Label Pull Request / Label Pull Request"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||

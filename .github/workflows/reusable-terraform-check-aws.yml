@@ -65,7 +65,7 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -78,7 +78,7 @@ jobs:
 
       - name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -108,7 +108,7 @@ jobs:
           find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
 
       - name: "Set Terraform Tests status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -121,7 +121,7 @@ jobs:
 
       - name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome

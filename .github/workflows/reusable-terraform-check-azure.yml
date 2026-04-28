@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
       - name: Setup asdf
         # We use the 'setup' variant of this action, because we have some custom behavior in
@@ -60,7 +60,7 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -73,7 +73,7 @@ jobs:
 
       - name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -88,7 +88,7 @@ jobs:
           subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
 
       - name: "Set Terraform Tests status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -101,7 +101,7 @@ jobs:
 
       - name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome

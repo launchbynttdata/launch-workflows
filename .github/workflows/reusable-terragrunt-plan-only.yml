@@ -211,13 +211,13 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@feat/unify-provider-auth
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
 
       - name: "Set Terragrunt Plan status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Plan (${{ inputs.tg_dir }})"
           status: "pending"
@@ -252,7 +252,7 @@ jobs:
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
         with:
           check_name: "Terragrunt Plan (${{ inputs.tg_dir }})"
           status: ${{ steps.plan.outcome == 'success' && 'success' || steps.plan.outcome

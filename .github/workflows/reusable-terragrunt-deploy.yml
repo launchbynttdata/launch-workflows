@@ -122,12 +122,21 @@ jobs:
       - name: Validate inputs and secrets
         id: validate
         shell: bash
+        env:
+          AUTH_METHOD: ${{ inputs.auth_method }}
+          AWS_AUTH_REGION: ${{ inputs.aws_auth_region }}
+          AWS_ASSUME_ROLE_ARN: ${{ inputs.aws_assume_role_arn }}
+          TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}
+          TERRAGRUNT_DEPLOY_AZURE_TENANT_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}
+          TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID: ${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+          GITHUB_APP_ID: ${{ inputs.github_app_id }}
+          TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET: ${{ secrets.TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET }}
         run: |
           auth_aws=false
           auth_azure=false
           auth_github=false
 
-          IFS=',' read -ra AUTH_METHODS <<< "${{ inputs.auth_method }}"
+          IFS=',' read -ra AUTH_METHODS <<< "$AUTH_METHOD"
           for method in "${AUTH_METHODS[@]}"; do
             method=$(echo "$method" | xargs)
             [[ -z "$method" ]] && continue
@@ -135,11 +144,11 @@ jobs:
               # --- AWS authentication validation ---
               aws)
                 auth_aws=true
-                if [[ -z "${{ inputs.aws_auth_region }}" ]]; then
+                if [[ -z "$AWS_AUTH_REGION" ]]; then
                   echo "Error: aws_auth_region input is required when auth_method includes 'aws'."
                   exit 1
                 fi
-                if [[ -z "${{ inputs.aws_assume_role_arn }}" ]]; then
+                if [[ -z "$AWS_ASSUME_ROLE_ARN" ]]; then
                   echo "Error: aws_assume_role_arn input is required when auth_method includes 'aws'."
                   exit 1
                 fi
@@ -147,15 +156,15 @@ jobs:
               # --- Azure authentication validation ---
               azure)
                 auth_azure=true
-                if [[ -z "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID }}" ]]; then
+                if [[ -z "$TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID" ]]; then
                   echo "Error: TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID secret is required when auth_method includes 'azure'."
                   exit 1
                 fi
-                if [[ -z "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_TENANT_ID }}" ]]; then
+                if [[ -z "$TERRAGRUNT_DEPLOY_AZURE_TENANT_ID" ]]; then
                   echo "Error: TERRAGRUNT_DEPLOY_AZURE_TENANT_ID secret is required when auth_method includes 'azure'."
                   exit 1
                 fi
-                if [[ -z "${{ secrets.TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID }}" ]]; then
+                if [[ -z "$TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID" ]]; then
                   echo "Error: TERRAGRUNT_DEPLOY_AZURE_SUBSCRIPTION_ID secret is required when auth_method includes 'azure'."
                   exit 1
                 fi
@@ -163,11 +172,11 @@ jobs:
               # --- GitHub App authentication validation ---
               github)
                 auth_github=true
-                if [[ -z "${{ inputs.github_app_id }}" ]]; then
+                if [[ -z "$GITHUB_APP_ID" ]]; then
                   echo "Error: github_app_id input is required when auth_method includes 'github'."
                   exit 1
                 fi
-                if [[ -z "${{ secrets.TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET }}" ]]; then
+                if [[ -z "$TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET" ]]; then
                   echo "Error: TERRAGRUNT_DEPLOY_GITHUB_APP_SECRET secret is required when auth_method includes 'github'."
                   exit 1
                 fi

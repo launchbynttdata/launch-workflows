@@ -39,6 +39,8 @@ jobs:
       - name: Setup Repository for Checks
         # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
         shell: bash
+        env:
+          TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
         run: |
           mkdir -p ~/.local/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
@@ -47,7 +49,7 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          export ARM_SUBSCRIPTION_ID=${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+          export ARM_SUBSCRIPTION_ID="$TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID"
           make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306

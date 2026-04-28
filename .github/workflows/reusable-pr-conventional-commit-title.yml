@@ -4,11 +4,11 @@ on:
       task_types:
         type: string
         description: "A JSON array of task types that are allowed. Default:
-          [\"feat\",\"fix\",\"docs\",\"test\",\"ci\",\"refactor\",\"perf\",\"ch\
-          ore\",\"revert\"]"
+          [\"feat\",\"fix\",\"docs\",\"test\",\"ci\",\"refactor\",\"perf\",
+          \"chore\",\"revert\"]"
         required: false
-        default: "[\"feat\",\"fix\",\"docs\",\"test\",\"ci\",\"refactor\",\"perf\",\"ch\
-          ore\",\"revert\"]"
+        default: "[\"feat\",\"fix\",\"docs\",\"test\",\"ci\",\"refactor\",\"perf\",
+          \"chore\",\"revert\"]"
       scope_types:
         type: string
         description: "A JSON array of valid scope types. If omitted, any scope is

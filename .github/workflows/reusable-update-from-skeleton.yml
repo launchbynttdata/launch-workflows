@@ -162,7 +162,7 @@ jobs:
           steps.run-updates.outputs.pre_commit_passed == 'true' && inputs.recopy
           != true
         run: |
-          PR_BODY=$(cat <<'EOF'
+          PR_BODY=$(cat <<-'EOF'
           Automated update from skeleton template.
 
           No conflicting changes were detected from the base repository.
@@ -188,14 +188,14 @@ jobs:
           inputs.recopy == true)
         run: |
           if [ "${{ inputs.recopy }}" == "true" ] && [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ]; then
-            PR_BODY=$(cat <<'EOF'
+            PR_BODY=$(cat <<-'EOF'
           Automated recopy from skeleton template.
 
           All templated files have been overwritten. Please review the changes carefully before merging.
           EOF
             )
           else
-            PR_BODY=$(cat <<EOF
+            PR_BODY=$(cat <<-'EOF'
           Automated update from skeleton template.
 
           ⚠️ Problems occurred during pre-commit validation. Manual review and conflict resolution may be required before merging.

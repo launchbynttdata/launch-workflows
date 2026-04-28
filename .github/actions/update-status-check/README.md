@@ -26,7 +26,7 @@ This action will:
 
 ### Basic Usage
 
-Mark a status check as successful on the current commit:
+Mark a status check as successful on the current commit (replacing `ref` with a tag or commit SHA from this repository):
 
 ```yaml
 jobs:
@@ -36,7 +36,7 @@ jobs:
       statuses: write
     steps:
       - name: Set status check to success
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
         with:
           check_name: "my-check"
           status: "success"
@@ -48,7 +48,7 @@ Provide additional context visible in the GitHub UI:
 
 ```yaml
 - name: Set status check to failure
-  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
   with:
     check_name: "security-scan"
     status: "failure"
@@ -62,7 +62,7 @@ Use `pending` to signal that a check is in progress, then update it on completio
 
 ```yaml
 - name: Mark check as pending
-  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
   with:
     check_name: "integration-tests"
     status: "pending"
@@ -73,7 +73,7 @@ Use `pending` to signal that a check is in progress, then update it on completio
 
 - name: Mark check as success
   if: success()
-  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
   with:
     check_name: "integration-tests"
     status: "success"
@@ -81,7 +81,7 @@ Use `pending` to signal that a check is in progress, then update it on completio
 
 - name: Mark check as failure
   if: failure()
-  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
   with:
     check_name: "integration-tests"
     status: "failure"
@@ -94,7 +94,7 @@ Override the default SHA to set a status on a commit other than the one that tri
 
 ```yaml
 - name: Set status on a specific commit
-  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@main
+  uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@ref
   with:
     check_name: "my-check"
     status: "success"

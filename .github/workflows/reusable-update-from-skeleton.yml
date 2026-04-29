@@ -62,12 +62,15 @@ jobs:
 
       - id: run-updates
         name: Run Updates from Skeleton
+        env:
+          RECOPY: ${{ inputs.recopy }}
+          CUSTOM_PROPERTIES: ${{ steps.get-repo-custom-properties.outputs.properties }}
         run: |
-          PRERELEASE=$(echo '${{ steps.get-repo-custom-properties.outputs.properties }}' | jq -r '.[] | select(.property_name == "prerelease") | .value')
+          PRERELEASE=$(echo "$CUSTOM_PROPERTIES" | jq -r '.[] | select(.property_name == "prerelease") | .value')
 
           COPIER_CMD="update"
           COPIER_FLAGS="--defaults --trust"
-          if [ "${{ inputs.recopy }}" == "true" ]; then
+          if [ "$RECOPY" == "true" ]; then
             COPIER_CMD="recopy"
             COPIER_FLAGS="$COPIER_FLAGS --overwrite"
           fi
@@ -136,31 +139,40 @@ jobs:
       - name: Commit and Push Changes
         id: commit-and-push
         if: steps.run-updates.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+          APP_SLUG: ${{ steps.get-app-token.outputs.app-slug }}
+          PRE_COMMIT_PASSED: ${{ steps.run-updates.outputs.pre_commit_passed }}
+          RECOPY: ${{ inputs.recopy }}
         run: |
-          USER_ID=$(gh api "/users/${{ steps.get-app-token.outputs.app-slug }}[bot]" --jq .id)
+          USER_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
 
-          git config --global user.name '${{ steps.get-app-token.outputs.app-slug }}[bot]'
-          git config --global user.email "$USER_ID+${{ steps.get-app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git config --global user.name "${APP_SLUG}[bot]"
+          git config --global user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
 
           BRANCH_NAME="patch/skeleton-update-$(date +%Y%m%d-%H%M%S)"
           echo "branch_name=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
           git checkout -b "$BRANCH_NAME"
+
+          # Files coming from a release in the template repo are assumed to be trusted,
+          # as they've been through the PR review process in that repository.
           git add .
 
-          if [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ] && [ "${{ inputs.recopy }}" != "true" ]; then
+          if [ "$PRE_COMMIT_PASSED" == "true" ] && [ "$RECOPY" != "true" ]; then
             git commit -m "chore: update from skeleton"
           else
             git commit -m "fix: update from skeleton"
           fi
 
           git push origin "$BRANCH_NAME"
-        env:
-          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
 
       - name: Create Pull Request
         if: steps.run-updates.outputs.has_changes == 'true' &&
           steps.run-updates.outputs.pre_commit_passed == 'true' && inputs.recopy
           != true
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+          BRANCH_NAME: ${{ steps.commit-and-push.outputs.branch_name }}
         run: |
           PR_BODY=$(cat <<-'EOF'
           Automated update from skeleton template.
@@ -170,24 +182,27 @@ jobs:
           )
           PR_URL=$(gh pr create \
             --base main \
-            --head "${{ steps.commit-and-push.outputs.branch_name }}" \
+            --head "$BRANCH_NAME" \
             --title "chore: update from skeleton" \
             --body "$PR_BODY")
-          gh pr merge "${{ steps.commit-and-push.outputs.branch_name }}" --auto --squash
+          gh pr merge "$BRANCH_NAME" --auto --squash
           echo "### ✅ Pull Request Created" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "$PR_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Auto-merge has been enabled." >> "$GITHUB_STEP_SUMMARY"
-        env:
-          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
 
       - name: Create Pull Request (requires review)
         if: steps.run-updates.outputs.has_changes == 'true' &&
           (steps.run-updates.outputs.pre_commit_passed == 'false' ||
           inputs.recopy == true)
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+          BRANCH_NAME: ${{ steps.commit-and-push.outputs.branch_name }}
+          RECOPY: ${{ inputs.recopy }}
+          PRE_COMMIT_PASSED: ${{ steps.run-updates.outputs.pre_commit_passed }}
         run: |
-          if [ "${{ inputs.recopy }}" == "true" ] && [ "${{ steps.run-updates.outputs.pre_commit_passed }}" == "true" ]; then
+          if [ "$RECOPY" == "true" ] && [ "$PRE_COMMIT_PASSED" == "true" ]; then
             PR_BODY=$(cat <<-'EOF'
           Automated recopy from skeleton template.
 
@@ -195,7 +210,7 @@ jobs:
           EOF
             )
           else
-            PR_BODY=$(cat <<-'EOF'
+            PR_BODY=$(cat <<-EOF
           Automated update from skeleton template.
 
           ⚠️ Problems occurred during pre-commit validation. Manual review and conflict resolution may be required before merging.
@@ -215,7 +230,7 @@ jobs:
           fi
           PR_URL=$(gh pr create \
             --base main \
-            --head "${{ steps.commit-and-push.outputs.branch_name }}" \
+            --head "$BRANCH_NAME" \
             --title "fix: update from skeleton" \
             --body "$PR_BODY")
           echo "### ⚠️ Pull Request Created (requires review)" >> "$GITHUB_STEP_SUMMARY"
@@ -223,5 +238,3 @@ jobs:
           echo "$PR_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "This PR requires manual review before merging." >> "$GITHUB_STEP_SUMMARY"
-        env:
-          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}

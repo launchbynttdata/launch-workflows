@@ -79,11 +79,17 @@ jobs:
     steps:
       - name: Check Pull Request
         id: check-pull-request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           ALLOWED_AUTHORS="dependabot[bot] launch-skeleton-auto-updater[bot]"
 
           # Get all commit authors on this PR
-          AUTHORS=$(gh api "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits" \
+          AUTHORS=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
             --jq '.[].author.login' | sort -u)
 
           echo "Commit authors on this PR:"
@@ -98,8 +104,7 @@ jobs:
             fi
           done
 
-          if [ "$SHOULD_APPROVE" == "true" ] && [ "${{ github.actor }}" == "launch-skeleton-auto-updater[bot]" ]; then
-            PR_TITLE="${{ github.event.pull_request.title }}"
+          if [ "$SHOULD_APPROVE" == "true" ] && [ "$GITHUB_ACTOR" == "launch-skeleton-auto-updater[bot]" ]; then
             if [[ "$PR_TITLE" != chore* ]]; then
               echo "Skeleton updater PR title does not start with 'chore': $PR_TITLE"
               SHOULD_APPROVE=false
@@ -107,8 +112,6 @@ jobs:
           fi
 
           echo "should_approve=$SHOULD_APPROVE" >> "$GITHUB_OUTPUT"
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Get Approver Alpha Token
         id: approver-alpha-token
@@ -126,34 +129,41 @@ jobs:
 
       - name: Approve PR
         if: steps.check-pull-request.outputs.should_approve == 'true'
+        env:
+          APPROVER_ALPHA_TOKEN: ${{ steps.approver-alpha-token.outputs.token }}
+          APPROVER_BRAVO_TOKEN: ${{ steps.approver-bravo-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           echo "All commits are from automated users. Approving PR..."
 
-          GH_TOKEN="${{ steps.approver-alpha-token.outputs.token }}" \
-          gh pr review "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
+          GH_TOKEN="$APPROVER_ALPHA_TOKEN" \
+          gh pr review "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
             --approve \
             --body "Automated approval: all commits from trusted automation accounts."
 
-          GH_TOKEN="${{ steps.approver-bravo-token.outputs.token }}" \
-          gh pr review "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
+          GH_TOKEN="$APPROVER_BRAVO_TOKEN" \
+          gh pr review "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
             --approve \
             --body "Automated approval: all commits from trusted automation accounts."
 
       - name: Revoke Approvals
         if: steps.check-pull-request.outputs.should_approve == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALPHA_SLUG: ${{ steps.approver-alpha-token.outputs.app-slug }}
+          BRAVO_SLUG: ${{ steps.approver-bravo-token.outputs.app-slug }}
+          ALPHA_TOKEN: ${{ steps.approver-alpha-token.outputs.token }}
+          BRAVO_TOKEN: ${{ steps.approver-bravo-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           echo "Non-automated commits detected. Revoking any existing automated approvals..."
 
-          # Get approver app slugs
-          ALPHA_SLUG="${{ steps.approver-alpha-token.outputs.app-slug }}"
-          BRAVO_SLUG="${{ steps.approver-bravo-token.outputs.app-slug }}"
-          ALPHA_TOKEN="${{ steps.approver-alpha-token.outputs.token }}"
-          BRAVO_TOKEN="${{ steps.approver-bravo-token.outputs.token }}"
-
           # Get all reviews on this PR
-          REVIEWS=$(gh api "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews")
+          REVIEWS=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews")
 
           # Dismiss Alpha's approval if present
           ALPHA_REVIEW_ID=$(echo "$REVIEWS" | jq -r ".[] | select(.user.login == \"${ALPHA_SLUG}[bot]\" and .state == \"APPROVED\") | .id" | head -1)
@@ -161,7 +171,7 @@ jobs:
             echo "Dismissing review $ALPHA_REVIEW_ID from ${ALPHA_SLUG}[bot]"
             GH_TOKEN="$ALPHA_TOKEN" gh api \
               --method PUT \
-              "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/$ALPHA_REVIEW_ID/dismissals" \
+              "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews/$ALPHA_REVIEW_ID/dismissals" \
               -f message="Automated approval revoked: non-automated commits detected on this PR."
           fi
 
@@ -171,8 +181,6 @@ jobs:
             echo "Dismissing review $BRAVO_REVIEW_ID from ${BRAVO_SLUG}[bot]"
             GH_TOKEN="$BRAVO_TOKEN" gh api \
               --method PUT \
-              "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/$BRAVO_REVIEW_ID/dismissals" \
+              "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews/$BRAVO_REVIEW_ID/dismissals" \
               -f message="Automated approval revoked: non-automated commits detected on this PR."
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}

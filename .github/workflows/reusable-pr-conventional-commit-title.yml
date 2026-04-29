@@ -126,8 +126,10 @@ jobs:
           (github.event.action == 'edited' && github.event.changes.title)) }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo '{"labels":[]}' | gh api -X PUT repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels --input -
+          echo '{"labels":[]}' | gh api -X PUT "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels" --input -
 
       - name: PR Conventional Commit Validation
         id: pr-validation
@@ -144,19 +146,31 @@ jobs:
       - name: Create failure comment based on inputs
         id: create-failure-comment
         if: ${{ failure() && inputs.comment_on_failure }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          TASK_TYPES: ${{ inputs.task_types }}
+          SCOPE_TYPES: ${{ inputs.scope_types }}
+          TITLE_REGEX: ${{ inputs.title_regex }}
         run: |
-          cat << EOC >> pr-title-failure-comment.md
-          ### ❌ Pull Request Title Validation Failed
-          Your pull request title (\`${{ github.event.pull_request.title }}\`) does not conform to the Conventional Commits specification.
-
-          Please ensure your title follows the format: \`<type>(<scope>): <description>\`.
-          - **Type** must be one of the following: ${{ inputs.task_types }}
-          ${{ inputs.scope_types && format('- **Scope** must be one of the following: {0}', inputs.scope_types) || '- **Scope** is optional and can be any value or omitted entirely.' }}
-          - **Description** should be a brief summary of the changes.
-          - If you have a breaking change, ensure the exclamation mark (\`!\`) is placed immediately after the type or scope, e.g., \`feat!: ...\` or \`feat(scope)!: ...\`.
-          ${{ inputs.title_regex && format('- Additionally, your description must match the custom regex: `{0}`.\n', inputs.title_regex) || '' }}
-          If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details.
-          EOC
+          {
+            echo "### ❌ Pull Request Title Validation Failed"
+            echo "Your pull request title (\`${PR_TITLE}\`) does not conform to the Conventional Commits specification."
+            echo ""
+            echo "Please ensure your title follows the format: \`<type>(<scope>): <description>\`."
+            echo "- **Type** must be one of the following: ${TASK_TYPES}"
+            if [[ -n "$SCOPE_TYPES" ]]; then
+              echo "- **Scope** must be one of the following: ${SCOPE_TYPES}"
+            else
+              echo "- **Scope** is optional and can be any value or omitted entirely."
+            fi
+            echo "- **Description** should be a brief summary of the changes."
+            echo "- If you have a breaking change, ensure the exclamation mark (\`!\`) is placed immediately after the type or scope, e.g., \`feat!: ...\` or \`feat(scope)!: ...\`."
+            if [[ -n "$TITLE_REGEX" ]]; then
+              echo "- Additionally, your description must match the custom regex: \`${TITLE_REGEX}\`."
+              echo ""
+            fi
+            echo "If you have any questions, please refer to the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) documentation for more details."
+          } >> pr-title-failure-comment.md
 
       - name: Find previous failure comment
         id: find-comment
@@ -182,9 +196,11 @@ jobs:
           inputs.comment_on_failure }}
         env:
           GH_TOKEN: ${{ github.token }}
+          COMMENT_ID: ${{ steps.find-comment.outputs.comment-id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          if [ "${{ steps.find-comment.outputs.comment-id }}" != "" ]; then
-            gh api -X DELETE repos/${{ github.repository }}/issues/comments/${{ steps.find-comment.outputs.comment-id }} --silent
+          if [ -n "$COMMENT_ID" ]; then
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/issues/comments/${COMMENT_ID}" --silent
           fi
 
       - id: set-status-check

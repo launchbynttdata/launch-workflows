@@ -222,20 +222,37 @@ jobs:
       - name: "Set default Terraform Tags (AWS)"
         if: needs.validate-inputs.outputs.auth_aws == 'true'
         id: set-tags-aws
+        env:
+          GIT_BRANCH: ${{ inputs.git_branch }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           set -x
-          echo "TF_VAR_organization_tag=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
-          echo "TF_VAR_repository_tag=$(echo "${{ github.repository }}" | cut -d "/" -f 2)" >> "$GITHUB_OUTPUT"
-          echo "TF_VAR_commit_hash_tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          echo "TF_VAR_branch_tag=${{ inputs.git_branch }}" >> "$GITHUB_OUTPUT"
+          repo=$(echo "$REPOSITORY" | cut -d "/" -f 2)
+          echo "TF_VAR_organization_tag=$REPO_OWNER" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_repository_tag=$repo" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_commit_hash_tag=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "TF_VAR_branch_tag=$GIT_BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: "Set default Terraform Tags (Azure)"
         if: needs.validate-inputs.outputs.auth_azure == 'true'
         id: set-tags-azure
+        env:
+          GIT_BRANCH: ${{ inputs.git_branch }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           set -x
-          repo=$(echo "${{ github.repository }}" | cut -d "/" -f 2)
-          echo "SYSTEM_TAGS={\"Organization\":\"${{ github.repository_owner }}\",\"Repository\":\"$repo\",\"Branch\":\"${{ inputs.git_branch }}\",\"CommitHash\":\"${{ github.sha }}\"}" >> "$GITHUB_OUTPUT"
+          repo=$(echo "$REPOSITORY" | cut -d "/" -f 2)
+          SYSTEM_TAGS=$(jq -nc \
+            --arg org "$REPO_OWNER" \
+            --arg repo "$repo" \
+            --arg branch "$GIT_BRANCH" \
+            --arg sha "$COMMIT_SHA" \
+            '{"Organization":$org,"Repository":$repo,"Branch":$branch,"CommitHash":$sha}')
+          echo "SYSTEM_TAGS=$SYSTEM_TAGS" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub App Token
         id: github-app-token

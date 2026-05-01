@@ -42,15 +42,18 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-pr-conventional-commit-title.yml@ref
 ```
 
 Be sure you replace `ref` with an appropriate ref to this repository.
 
 > [!CAUTION]
-> By default, your repository likely does not require this workflow to succeed before a change is merged. By making this workflow required, you ensure that a successful run must be achieved prior to merge, which ensures your commit messages are consistent!
+> By default, your repository may not require this workflow to succeed before a change is merged. By making this workflow required, you ensure that a successful run must be achieved prior to merge, which ensures your commit messages are consistent!
 > 
-> To make this workflow required, visit your repository's settings and create a new Ruleset with a required status check, as shown below:
+> Repositories within `launchbynttdata` are already configured with a required status check, and no further action needs to be taken.
+
+To make this workflow required, visit your repository's settings and create a new Ruleset with a required status check, as shown below:
 
 ![Required status check in the GitHub settings page](images/required-status-check.png)
 

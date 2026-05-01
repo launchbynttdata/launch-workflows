@@ -80,7 +80,7 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.14.2
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
@@ -99,5 +99,6 @@ jobs:
           ARM_USE_OIDC: true
           TF_VAR_system_tags: ${{ steps.set-tags.outputs.SYSTEM_TAGS }}
         with:
-          tg_dir: "${{inputs.environments_root}}/${{ inputs.environment }}/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_dir: "${{inputs.environments_root}}/${{ inputs.environment }}/${{
+            inputs.region }}/${{ inputs.env_id }}"
           tg_command: "plan"

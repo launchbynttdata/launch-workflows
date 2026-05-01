@@ -4,32 +4,34 @@ on:
   workflow_call:
     inputs:
       python-version:
-        description: 'Python version to test against. Currently, this only supports one version per workflow run.'
+        description: "Python version to test against. Currently, this only supports one
+          version per workflow run."
         required: false
         type: string
-        default: '3.11'
+        default: "3.11"
       asdf-install:
-        description: 'Whether to install supplementary tools from .tool-versions'
+        description: "Whether to install supplementary tools from .tool-versions"
         required: false
         type: boolean
         default: true
       lcaf-makefile-setup:
-        description: 'Whether to set the environment up for the LCAF Makefile'
+        description: "Whether to set the environment up for the LCAF Makefile"
         required: false
         type: boolean
         default: false
       lcaf-aws-region:
-        description: 'AWS region to use for LCAF Makefile setup. Ignored if lcaf-makefile-setup is false.'
+        description: "AWS region to use for LCAF Makefile setup. Ignored if
+          lcaf-makefile-setup is false."
         required: false
         type: string
-        default: 'us-east-2'
+        default: "us-east-2"
       run-ruff:
-        description: 'Run Ruff for linting and formatting checks'
+        description: "Run Ruff for linting and formatting checks"
         required: false
         type: boolean
         default: true
       report-coverage:
-        description: 'Report on code coverage with a comment on the PR'
+        description: "Report on code coverage with a comment on the PR"
         required: false
         type: boolean
         default: true
@@ -47,62 +49,63 @@ jobs:
       matrix:
         python-version: [ "${{ inputs.python-version }}" ]
     steps:
-    - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
-    - name: Restore cached asdf tools
-      uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      if: ${{ inputs.asdf-install }}
-      id: cache
-      with:
-        path: ~/.asdf
-        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+      - name: Restore cached asdf tools
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        if: ${{ inputs.asdf-install }}
+        id: cache
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
-    - name: asdf install
-      if: ${{ inputs.asdf-install }}
-      uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47 
+      - name: asdf install
+        if: ${{ inputs.asdf-install }}
+        uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47
 
-    - name: Cache asdf tools
-      uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
-      id: save-cache
-      if: ${{ inputs.asdf-install && steps.cache.outputs.cache-hit != 'true' }}
-      with:
-        path: ~/.asdf
-        key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+      - name: Cache asdf tools
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        id: save-cache
+        if: ${{ inputs.asdf-install && steps.cache.outputs.cache-hit != 'true' }}
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Setup Repository for Makefile
-      if: ${{ inputs.lcaf-makefile-setup }}
-      # Ensure the 'repo' tool is installed, set up git to make the Makefile happy
-      shell: bash
-      run: |
-        mkdir -p ~/.local/bin
-        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
-        chmod +x ~/.local/bin/repo
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-        set -x
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "noreply@launch.nttdata.com"
-        export AWS_REGION=${{ inputs.lcaf-aws-region }}
+      - name: Setup Repository for Makefile
+        if: ${{ inputs.lcaf-makefile-setup }}
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy
+        shell: bash
+        env:
+          AWS_REGION: ${{ inputs.lcaf-aws-region }}
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "noreply@launch.nttdata.com"
 
-    - name: Ruff check
-      if: ${{ inputs.run-ruff }}
-      run: |
-        uvx ruff check
+      - name: Ruff check
+        if: ${{ inputs.run-ruff }}
+        run: |
+          uvx ruff check
 
-    - name: Test with pytest
-      run: |
-        uv run pytest
+      - name: Test with pytest
+        run: |
+          uv run pytest
 
-    - name: Report coverage
-      if: ${{ inputs.report-coverage }}
-      uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4
-      with:
-        pytest-xml-coverage-path: ./htmlcov/coverage.xml
-        title: Coverage report for Python ${{ matrix.python-version }}
-        remove-link-from-badge: true
-        unique-id-for-comment: ${{ matrix.python-version }}
-        coverage-path-prefix: src/
+      - name: Report coverage
+        if: ${{ inputs.report-coverage }}
+        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4
+        with:
+          pytest-xml-coverage-path: ./htmlcov/coverage.xml
+          title: Coverage report for Python ${{ matrix.python-version }}
+          remove-link-from-badge: true
+          unique-id-for-comment: ${{ matrix.python-version }}
+          coverage-path-prefix: src/

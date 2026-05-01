@@ -46,22 +46,24 @@ jobs:
         id: prerequisite-check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           cat <<EOC > first-time-comment.md
           > [!TIP]
           > This is your first PR, and it will be labeled as a \`major\` release.
-          > 
+          >
           > If you need to change this because you have existing tags, manually remove the label and apply the appropriate one (\`patch\`, \`minor\`).
           EOC
 
           PR_NUMBER=$(echo "${GITHUB_REF}" | cut -d'/' -f3)
-            if git diff --name-only HEAD origin/${{ github.event.pull_request.base.ref }} | grep -q "^\.github/release-drafter\.yml$"; then
+            if git diff --name-only HEAD "origin/${BASE_REF}" | grep -q "^\.github/release-drafter\.yml$"; then
               echo "updates_configuration=true" >> $GITHUB_OUTPUT
             else
               echo "updates_configuration=false" >> $GITHUB_OUTPUT
             fi
           if [[ $PR_NUMBER -eq "1" ]]; then
-            if git cat-file -e origin/${{ github.event.repository.default_branch }}:.github/release-drafter.yml 2>/dev/null; then
+            if git cat-file -e "origin/${DEFAULT_BRANCH}:.github/release-drafter.yml" 2>/dev/null; then
               # First PR, but we have a release-drafter.yml file on the main branch so we can let it proceed as normal.
               echo "auto_label=true" >> $GITHUB_OUTPUT
             else

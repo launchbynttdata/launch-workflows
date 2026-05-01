@@ -49,10 +49,6 @@ categories:
     collapse-after: 3
     labels:
       - "revert"
-  - title: "🚧 WIP"
-    collapse-after: 3
-    labels:
-      - "WIP"
 
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 

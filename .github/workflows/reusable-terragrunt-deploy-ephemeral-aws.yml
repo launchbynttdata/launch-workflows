@@ -17,7 +17,9 @@ on:
         default: "0.54.11"
         type: string
       assume_role_arn:
-        description: "ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so."
+        description: "ARN of the role to assume prior to Terragrunt invocation.
+          Terragrunt may use this role to assume other roles if configured to do
+          so."
         required: true
         type: string
       region:
@@ -44,7 +46,8 @@ on:
         type: string
         default: ""
       before_shared_commands:
-        description: "Commands to run prior to both Terragrunt plan and apply. These are applied after before_plan_commands and before_deploy_commands."
+        description: "Commands to run prior to both Terragrunt plan and apply. These are
+          applied after before_plan_commands and before_deploy_commands."
         required: false
         type: string
         default: ""
@@ -59,13 +62,15 @@ on:
         type: string
         default: ""
       after_shared_commands:
-        description: "Commands to run after both Terragrunt plan and apply. These are applied after after_plan_commands and after_deploy_commands."
+        description: "Commands to run after both Terragrunt plan and apply. These are
+          applied after after_plan_commands and after_deploy_commands."
         required: false
         type: string
         default: ""
     outputs:
       terraform_outputs_json:
-        description: "Base64-encoded JSON string containing all non-sensitive Terraform outputs from the apply"
+        description: "Base64-encoded JSON string containing all non-sensitive Terraform
+          outputs from the apply"
         value: ${{ jobs.deploy.outputs.terraform_outputs_json }}
 
 permissions:
@@ -80,7 +85,7 @@ jobs:
       terraform_outputs_json: ${{ steps.set-outputs.outputs.terraform_outputs_json }}
     steps:
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
@@ -100,7 +105,7 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.14.2
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
@@ -126,8 +131,10 @@ jobs:
         with:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
-          tg_command: "plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
+          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{
+            inputs.env_id }}"
+          tg_command: "plan -out=ephemeral-${{ inputs.region }}-${{ inputs.env_id
+            }}.tfplan"
 
       - name: Deploy
         id: deploy
@@ -153,7 +160,8 @@ jobs:
         with:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{ inputs.env_id }}"
+          tg_dir: "${{ inputs.environments_root }}/sandbox/${{ inputs.region }}/${{
+            inputs.env_id }}"
           tg_command: "apply ephemeral-${{ inputs.region }}-${{ inputs.env_id }}.tfplan"
 
       - name: Set Terraform Outputs

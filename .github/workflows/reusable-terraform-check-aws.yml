@@ -4,18 +4,21 @@ on:
   workflow_call:
     inputs:
       assume_role_arn:
-        description: 'ARN of the role to assume prior to Terragrunt invocation. Terragrunt may use this role to assume other roles if configured to do so.'
+        description: "ARN of the role to assume prior to Terragrunt invocation.
+          Terragrunt may use this role to assume other roles if configured to do
+          so."
         required: true
         type: string
       region:
-        description: 'Region within the environment (e.g. us-east-1) to deploy'
-        default: 'us-east-2'
+        description: "Region within the environment (e.g. us-east-1) to deploy"
+        default: "us-east-2"
         required: true
         type: string
 
 permissions:
   id-token: write
   contents: read
+  statuses: write
 
 jobs:
   check:
@@ -26,7 +29,7 @@ jobs:
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
       - name: Setup asdf
-        # We use the 'setup' variant of this action, because we have some custom behavior in 
+        # We use the 'setup' variant of this action, because we have some custom behavior in
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
@@ -41,6 +44,8 @@ jobs:
       - name: Setup Repository for Checks
         # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
         shell: bash
+        env:
+          AWS_REGION: ${{ inputs.region }}
         run: |
           mkdir -p ~/.local/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
@@ -49,7 +54,6 @@ jobs:
           set -x
           git config user.name "GitHub Actions"
           git config user.email "noreply@launch.nttdata.com"
-          export AWS_REGION=${{ inputs.region }}
           make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
@@ -61,11 +65,29 @@ jobs:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
-      - name: "make lint"
+      - name: "Set Terraform Lint status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Lint"
+          status: "pending"
+          description: "Terraform lint check is running..."
+
+      - id: lint
+        name: "make lint"
         run: |
           make lint
 
-      - name: Configure AWS credentials
+      - name: "Update Terraform Lint status"
+        if: always() && steps.lint.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Lint"
+          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
+            == 'failure' && 'failure' || 'error' }}
+          description: "Terraform lint ${{ steps.lint.outcome }}"
+
+      - id: aws-login
+        name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:
           role-to-assume: ${{ inputs.assume_role_arn }}
@@ -80,12 +102,29 @@ jobs:
           set -x
           mkdir -p ~/.aws
           echo "[default]" > ~/.aws/credentials
-          echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
-          echo "aws_session_token=${{ secrets.AWS_SESSION_TOKEN }}" >> ~/.aws/credentials
+          echo "aws_access_key_id=${{ steps.aws-login.outputs.aws-access-key-id }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{ steps.aws-login.outputs.aws-secret-access-key }}" >> ~/.aws/credentials
+          echo "aws_session_token=${{ steps.aws-login.outputs.aws-session-token }}" >> ~/.aws/credentials
           # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
           find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
 
-      - name: "make test"
+      - name: "Set Terraform Tests status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Tests"
+          status: "pending"
+          description: "Terraform tests are running..."
+
+      - id: test
+        name: "make test"
         run: |
           make test
+
+      - name: "Update Terraform Tests status"
+        if: always() && steps.test.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Tests"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
+            == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"

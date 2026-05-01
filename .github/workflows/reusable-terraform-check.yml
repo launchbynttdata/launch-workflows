@@ -1,0 +1,374 @@
+name: Check Terraform Code
+
+on:
+  workflow_call:
+    inputs:
+      auth_method:
+        description: "Comma-delimited list of authentication methods to use. Valid
+          values are \"aws\", \"azure\", and \"github\" (e.g. \"aws\",
+          \"aws,github\", \"aws,azure\"). Pass an empty string or omit to run
+          Terraform checks without any authentication."
+        required: false
+        default: ""
+        type: string
+      # --- AWS authentication inputs ---
+      aws_assume_role_arn:
+        description: "ARN of the role to assume when running tests and creating test
+          resources. Required if auth_method includes 'aws', ignored otherwise.
+          Defaults to the value of the TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN
+          variable."
+        required: false
+        type: string
+        default: "${{ vars.TERRAFORM_CHECK_AWS_ASSUME_ROLE_ARN }}"
+      aws_auth_region:
+        description: "AWS region to use for authentication. Required if auth_method
+          includes 'aws', ignored otherwise. Defaults to the value of the
+          TERRAFORM_CHECK_AWS_REGION variable."
+        default: "${{ vars.TERRAFORM_CHECK_AWS_REGION }}"
+        required: false
+        type: string
+      # --- GitHub App authentication inputs ---
+      github_app_id:
+        description: "The GitHub App ID to use for authentication, defaulting to the
+          TERRAFORM_CHECK_GITHUB_APP_ID variable. Required if auth_method
+          includes 'github', ignored otherwise."
+        required: false
+        default: "${{ vars.TERRAFORM_CHECK_GITHUB_APP_ID }}"
+        type: string
+    secrets:
+      # --- Azure authentication secrets (required if auth_method includes 'azure') ---
+      TERRAFORM_CHECK_AZURE_CLIENT_ID:
+        required: false
+      TERRAFORM_CHECK_AZURE_TENANT_ID:
+        required: false
+      TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID:
+        required: false
+      # --- GitHub App authentication secrets (required if auth_method includes 'github') ---
+      TERRAFORM_CHECK_GITHUB_APP_SECRET:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: read
+  id-token: write
+  statuses: write
+
+jobs:
+  validate-inputs:
+    name: "Validate Inputs"
+    runs-on: ubuntu-latest
+    outputs:
+      auth_aws: ${{ steps.validate.outputs.auth_aws }}
+      auth_azure: ${{ steps.validate.outputs.auth_azure }}
+      auth_github: ${{ steps.validate.outputs.auth_github }}
+    steps:
+      - name: Validate inputs and secrets
+        id: validate
+        shell: bash
+        env:
+          AUTH_METHOD: ${{ inputs.auth_method }}
+          AWS_ASSUME_ROLE_ARN: ${{ inputs.aws_assume_role_arn }}
+          AWS_AUTH_REGION: ${{ inputs.aws_auth_region }}
+          TERRAFORM_CHECK_AZURE_CLIENT_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          TERRAFORM_CHECK_AZURE_TENANT_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+          GITHUB_APP_ID: ${{ inputs.github_app_id }}
+          TERRAFORM_CHECK_GITHUB_APP_SECRET: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
+        run: |
+          auth_aws=false
+          auth_azure=false
+          auth_github=false
+
+          IFS=',' read -ra AUTH_METHODS <<< "$AUTH_METHOD"
+          for method in "${AUTH_METHODS[@]}"; do
+            method=$(echo "$method" | xargs)
+            [[ -z "$method" ]] && continue
+            case "$method" in
+              # --- AWS authentication validation ---
+              aws)
+                auth_aws=true
+                if [[ -z "$AWS_ASSUME_ROLE_ARN" ]]; then
+                  echo "Error: aws_assume_role_arn input is required when auth_method includes 'aws'."
+                  exit 1
+                fi
+                if [[ -z "$AWS_AUTH_REGION" ]]; then
+                  echo "Error: aws_auth_region input is required when auth_method includes 'aws'."
+                  exit 1
+                fi
+                ;;
+              # --- Azure authentication validation ---
+              azure)
+                auth_azure=true
+                if [[ -z "$TERRAFORM_CHECK_AZURE_CLIENT_ID" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_CLIENT_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                if [[ -z "$TERRAFORM_CHECK_AZURE_TENANT_ID" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_TENANT_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                if [[ -z "$TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID" ]]; then
+                  echo "Error: TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID secret is required when auth_method includes 'azure'."
+                  exit 1
+                fi
+                ;;
+              # --- GitHub App authentication validation ---
+              github)
+                auth_github=true
+                if [[ -z "$GITHUB_APP_ID" ]]; then
+                  echo "Error: github_app_id input is required when auth_method includes 'github'."
+                  exit 1
+                fi
+                if [[ -z "$TERRAFORM_CHECK_GITHUB_APP_SECRET" ]]; then
+                  echo "Error: TERRAFORM_CHECK_GITHUB_APP_SECRET secret is required when auth_method includes 'github'."
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "Error: Invalid auth_method '$method'. Valid values are 'aws', 'azure', and 'github'."
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "auth_aws=$auth_aws" >> $GITHUB_OUTPUT
+          echo "auth_azure=$auth_azure" >> $GITHUB_OUTPUT
+          echo "auth_github=$auth_github" >> $GITHUB_OUTPUT
+  lint:
+    name: "Lint Module"
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: dependencies
+        name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: cache-restore
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: configure
+        name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          make configure
+
+      - id: save-cache
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        name: Cache asdf tools
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: set-lint-pending
+        name: "Set Terraform Lint status to pending"
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Lint"
+          status: "pending"
+          description: "Terraform lint check is running..."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
+
+      - id: lint
+        name: "make lint"
+        run: |
+          make lint
+
+      - id: update-lint-status
+        name: "Update Terraform Lint status"
+        if: always() && steps.lint.outcome != 'skipped'
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Lint"
+          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
+            == 'failure' && 'failure' || 'error' }}
+          description: "Terraform lint ${{ steps.lint.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
+
+  tests:
+    name: "Run Tests"
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: dependencies
+        name: Setup asdf
+        # We use the 'setup' variant of this action, because we have some custom behavior in
+        # our .tool-versions file and Makefile to install plugins from outside the default registry.
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: cache-restore
+        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
+        name: Restore cached asdf tools
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: configure
+        name: Setup Repository for Checks
+        # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
+        shell: bash
+        env:
+          AUTH_AWS: ${{ needs.validate-inputs.outputs.auth_aws }}
+          AUTH_AZURE: ${{ needs.validate-inputs.outputs.auth_azure }}
+          AWS_AUTH_REGION: ${{ inputs.aws_auth_region }}
+          TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+        run: |
+          mkdir -p ~/.local/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.local/bin/repo
+          chmod +x ~/.local/bin/repo
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          set -x
+          git config user.name "GitHub Actions"
+          git config user.email "noreply@launch.nttdata.com"
+          if [[ "$AUTH_AWS" == "true" ]]; then
+            export AWS_REGION="$AWS_AUTH_REGION"
+          elif [[ "$AUTH_AZURE" == "true" ]]; then
+            export ARM_SUBSCRIPTION_ID="$TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID"
+          fi
+          make configure
+
+      - id: save-cache
+        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        name: Cache asdf tools
+        # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        with:
+          path: ~/.asdf
+          key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: configure-aws-credentials
+        name: Configure AWS credentials
+        if: needs.validate-inputs.outputs.auth_aws == 'true'
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
+        with:
+          role-to-assume: ${{ inputs.aws_assume_role_arn }}
+          role-session-name: ${{ github.run_id }}
+          aws-region: ${{ inputs.aws_auth_region }}
+
+      - id: create-aws-profile
+        name: "Create AWS Profile"
+        if: needs.validate-inputs.outputs.auth_aws == 'true'
+        # Works around the interactions of aws-actions/configure-aws-credentials with 5.x.x AWS TF provider.
+        # In short, we need to create the profile in ~/.aws/credentials for the provider to use, but also need
+        # to remove line setting the profile in our examples, or we see failures to initialize the provider.
+        run: |
+          set -x
+          mkdir -p ~/.aws
+          install -m 600 /dev/null ~/.aws/credentials
+          echo "[default]" > ~/.aws/credentials
+          echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+          echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+          echo "aws_session_token=$AWS_SESSION_TOKEN" >> ~/.aws/credentials
+          # Fixup examples' provider.tf by dropping references to the profile, so that we can use the default profile.
+          find examples -type f -name "provider.tf" -mindepth 2 -maxdepth 2 -exec bash -c 'grep -vE "profile\s=" "$1" > $1.tmp && mv $1.tmp $1' bash {} \;
+
+      - id: azure-login
+        name: Azure login
+        if: needs.validate-inputs.outputs.auth_azure == 'true'
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        with:
+          client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
+
+      - id: github-app-token
+        name: Create GitHub App Token
+        if: needs.validate-inputs.outputs.auth_github == 'true'
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        with:
+          app-id: ${{ inputs.github_app_id }}
+          private-key: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+
+      - id: set-tests-pending
+        name: "Set Terraform Tests status to pending"
+        continue-on-error: true
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Tests"
+          status: "pending"
+          description: "Terraform tests are running..."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
+
+      - id: test
+        name: "make test"
+        env:
+          GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
+        run: |
+          # Hack for Azure, reevaluate when we have another look at the Make targets
+          make tfmodule/create_example_providers
+
+          make test
+
+      - id: update-tests-status
+        name: "Update Terraform Tests status"
+        if: always() && steps.test.outcome != 'skipped'
+        continue-on-error: true
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Terraform Tests"
+          status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
+            == 'failure' && 'failure' || 'error' }}
+          description: "Terraform tests ${{ steps.test.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
+
+  # These legacy status checks will write the necessary success for the existing launch workflows, so that we can transition
+  # between models without breaking merge capabilities on existing repositories. Once all repositories have transitioned to
+  # the new checks, we can remove this entire job.
+  legacy:
+    name: "Legacy Status Checks"
+    runs-on: ubuntu-latest
+    needs: [ validate-inputs, lint, tests ]
+    steps:
+      - id: update-legacy-status-checks-aws
+        name: "Add AWS Legacy Status Check"
+        if: startsWith(github.event.repository.name, 'tf-aws-')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
+          status: "success"
+          description: "This check is being deprecated. Please refer to the new 'Terraform
+            Tests' check for test results."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"
+
+      - id: update-legacy-status-checks-azure
+        name: "Add Azure Legacy Status Check"
+        if: startsWith(github.event.repository.name, 'tf-az')
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        with:
+          check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
+          status: "success"
+          description: "This check is being deprecated. Please refer to the new 'Terraform
+            Tests' check for test results."
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"

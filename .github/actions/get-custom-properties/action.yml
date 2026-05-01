@@ -1,0 +1,61 @@
+name: "Get Custom Properties"
+description: "Retrieve custom properties from a GitHub repository"
+inputs:
+  owner:
+    description: "The owner (organization or user) of the repository. Defaults to the current repository owner."
+    required: false
+    default: ${{ github.repository_owner }}
+  repo:
+    description: "The name of the repository. Defaults to the current repository name."
+    required: false
+    default: ${{ github.event.repository.name }}
+  github_token:
+    description: "GitHub token for API access. Defaults to the automatic GITHUB_TOKEN."
+    required: false
+    default: ${{ github.token }}
+outputs:
+  properties:
+    description: "JSON object containing all custom properties applied to the repository"
+    value: ${{ steps.get-properties.outputs.properties }}
+runs:
+  using: "composite"
+  steps:
+    - name: Get Custom Properties
+      id: get-properties
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        OWNER: ${{ inputs.owner }}
+        REPO: ${{ inputs.repo }}
+      run: |
+        if [[ -z "$OWNER" ]]; then
+          echo "Error: Repository owner not provided and not available in the event context."
+          exit 1
+        fi
+
+        if [[ -z "$REPO" ]]; then
+          echo "Error: Repository name not provided and not available in the event context."
+          exit 1
+        fi
+
+        echo "Fetching custom properties for ${OWNER}/${REPO}..."
+
+        RESPONSE=$(curl -sL \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+          -H "X-GitHub-Api-Version: 2026-03-10" \
+          "https://api.github.com/repos/${OWNER}/${REPO}/properties/values")
+
+        # Check for API errors
+        if echo "$RESPONSE" | jq -e '.message' > /dev/null 2>&1; then
+          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.message')
+          echo "Error from GitHub API: $ERROR_MSG"
+          exit 1
+        fi
+
+        # Output the properties as JSON
+        echo "properties<<EOF" >> $GITHUB_OUTPUT
+        echo "$RESPONSE" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "Successfully retrieved custom properties for ${OWNER}/${REPO}"

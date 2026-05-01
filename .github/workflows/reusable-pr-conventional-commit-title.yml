@@ -206,7 +206,7 @@ jobs:
       - id: set-status-check
         name: Set Status Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Conventional Commit PR Title"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||
@@ -218,7 +218,7 @@ jobs:
       - id: set-status-check-legacy
         name: Set Legacy Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Label Pull Request / Label Pull Request"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||

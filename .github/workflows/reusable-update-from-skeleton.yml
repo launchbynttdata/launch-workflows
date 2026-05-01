@@ -58,7 +58,7 @@ jobs:
 
       - id: get-repo-custom-properties
         name: Get Repository Custom Properties
-        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@feat/unify-provider-auth
+        uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@0.15.0
 
       - id: run-updates
         name: Run Updates from Skeleton

@@ -3,12 +3,19 @@ name: Dependabot Auto-Merge
 on:
   workflow_call:
     inputs:
-      # No inputs needed for this workflow, but we need to define at least one to make it callable.
-      placeholder:
-        type: string
+      skeleton_update_app_id:
+        description: "The GitHub App ID of the app to use for authentication when
+          auto-merging. The app must be installed on the repository and have
+          permissions to read and write code, as well as create pull requests."
         required: false
-        default: ""
-        description: "This input is not used, but is required to make this workflow callable."
+        type: string
+        default: ${{ vars.LAUNCH_SKELETON_UPDATE_APP_ID }}
+    secrets:
+      LAUNCH_SKELETON_UPDATE_KEY:
+        description: "The private key for the GitHub App used for authentication when
+          auto-merging. The app must be installed on the repository and have
+          permissions to read and write code, as well as create pull requests."
+        required: true
 
 permissions:
   contents: write
@@ -20,8 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
+      # By passing the token of a GitHub app and having that identity perform the auto-merge,
+      # Dependabot no longer owns the PR and subsequent actions runs that would otherwise be 
+      # skipped for Dependabot-authored PRs (release on merge to main) will run as expected.
+      - id: get-app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        with:
+          app-id: ${{ inputs.skeleton_update_app_id }}
+          private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}
+
       - name: Enable auto-merge
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get-app-token.outputs.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash "$PR_URL"

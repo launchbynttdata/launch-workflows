@@ -4,6 +4,8 @@ Automatically enables GitHub's auto-merge (squash strategy) on pull requests cre
 
 This workflow only runs when the PR actor is `dependabot[bot]`. For all other actors, the job is skipped.
 
+A GitHub App token is used to perform the merge rather than `GITHUB_TOKEN`. This ensures that the resulting push to the default branch is attributed to the GitHub App rather than `dependabot[bot]`, which allows downstream workflows (such as a release process) to be triggered as expected. When Dependabot performs the merge directly, GitHub suppresses re-triggering of actions to prevent infinite loops.
+
 ## Usage
 
 Add the following workflow to your repository (suggested name: `.github/workflows/pr-dependabot-automerge.yml`):
@@ -26,6 +28,8 @@ jobs:
       contents: write
       pull-requests: write
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-pr-dependabot-automerge.yml@ref
+    with:
+      skeleton_update_app_id: ${{ vars.LAUNCH_SKELETON_UPDATE_APP_ID }}
     secrets: inherit
 ```
 
@@ -36,8 +40,16 @@ Be sure you replace `ref` with an appropriate ref to this repository.
 
 ## Inputs
 
-This workflow has no configurable inputs.
+| Input | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `skeleton_update_app_id` | `string` | No | `vars.LAUNCH_SKELETON_UPDATE_APP_ID` | The GitHub App ID to use for authentication when enabling auto-merge. The app must be installed on the repository with permissions to read and write code and create pull requests. |
+
+## Secrets
+
+| Secret | Required | Description |
+|--------|----------|-------------|
+| `LAUNCH_SKELETON_UPDATE_KEY` | Yes | The private key for the GitHub App used for authentication. |
 
 ## Required Permissions
 
-The calling workflow must grant `contents: write` and `pull-requests: write` permissions so that the `GITHUB_TOKEN` can enable auto-merge on the pull request.
+The calling workflow must grant `contents: write` and `pull-requests: write` permissions. The GitHub App identified by `skeleton_update_app_id` and `LAUNCH_SKELETON_UPDATE_KEY` must be installed on the repository with permissions to read and write code and to read and write pull requests.

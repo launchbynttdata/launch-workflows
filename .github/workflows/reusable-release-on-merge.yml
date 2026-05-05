@@ -5,32 +5,45 @@ on:
     inputs:
       config_name:
         type: string
-        description: 'The name of the release drafter config file to use. Default: release-drafter.yml'
+        description: "The name of the release drafter config file to use. Default:
+          release-drafter.yml"
         required: false
-        default: 'release-drafter.yml'
+        default: "release-drafter.yml"
       commitish:
         type: string
-        description: 'The release target, i.e. branch or commit it should point to. Default: main'
+        description: "The release target, i.e. branch or commit it should point to.
+          Default: main"
         required: false
-        default: 'main'
+        default: "main"
       latest:
         type: boolean
-        description: 'Whether this should be marked as the latest release. Default: true'
+        description: "Whether this should be marked as the latest release. Default: true"
         required: false
         default: true
       disable_autolabeler:
         type: boolean
-        description: 'Whether to disable the autolabeler. Autolabeler should remain disabled if you label the pull requests with another workflow. Default: true'
+        description: "Whether to disable the autolabeler. Autolabeler should remain
+          disabled if you label the pull requests with another workflow.
+          Default: true"
         required: false
         default: true
-      run_post_release_workflow:
-        type: boolean
-        description: 'Trigger a post-release workflow at .github/workflows/release-post-actions.yml within your repository that receives a "version" input with the version that was just released. This workflow can do whatever you need, but generally is used to e.g. release a package to a package regsitry. Default: false'
+      prerelease_identifier:
+        type: string
+        description: "The identifier to use for prereleases, e.g. \"beta\" or \"rc\". If
+          this is set, the release will be marked as a prerelease and the tag
+          name will be suffixed with this identifier. Default: empty string"
         required: false
-        default: false
+        default: ""
+      publish:
+        type: boolean
+        description: "Whether to publish the release immediately. If false, the release
+          will be created as a draft. Default: true"
+        required: false
+        default: true
     outputs:
       release_version:
-        description: 'The version of the release that was created by this workflow. This is the tag name of the release.'
+        description: "The version of the release that was created by this workflow. This
+          is the tag name of the release."
         value: ${{ jobs.create-release.outputs.release_version }}
 
 jobs:
@@ -48,7 +61,8 @@ jobs:
           config-name: ${{ inputs.config_name }}
           commitish: ${{ inputs.commitish }}
           disable-autolabeler: ${{ inputs.disable_autolabeler }}
-          publish: true
+          publish: ${{ inputs.publish }}
+          prerelease-identifier: ${{ inputs.prerelease_identifier }}
           latest: ${{ inputs.latest }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

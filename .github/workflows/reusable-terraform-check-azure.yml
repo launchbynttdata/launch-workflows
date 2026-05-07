@@ -2,6 +2,12 @@ name: Check Azure Terraform Code
 
 on:
   workflow_call:
+    inputs:
+      status_check_app_id:
+        description: "GitHub App ID used to generate a token for writing commit statuses."
+        required: false
+        type: string
+        default: ${{ vars.LAUNCH_STATUS_CHECK_APP_ID }}
     secrets:
       TERRAFORM_CHECK_AZURE_CLIENT_ID:
         required: true
@@ -9,17 +15,24 @@ on:
         required: true
       TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID:
         required: true
+      LAUNCH_STATUS_CHECK_KEY:
+        required: true
 
 permissions:
   id-token: write
   contents: read
-  statuses: write
 
 jobs:
   check:
     name: "Check Azure Terraform Code"
     runs-on: ubuntu-latest
     steps:
+      - id: get-app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        with:
+          app-id: ${{ inputs.status_check_app_id }}
+          private-key: ${{ secrets.LAUNCH_STATUS_CHECK_KEY }}
+
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
@@ -67,6 +80,7 @@ jobs:
           check_name: "Terraform Lint"
           status: "pending"
           description: "Terraform lint check is running..."
+          github_token: ${{ steps.get-app-token.outputs.token }}
 
       - id: lint
         name: "make lint"
@@ -81,6 +95,7 @@ jobs:
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
             == 'failure' && 'failure' || 'error' }}
           description: "Terraform lint ${{ steps.lint.outcome }}"
+          github_token: ${{ steps.get-app-token.outputs.token }}
 
       - name: Azure login
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
@@ -95,6 +110,7 @@ jobs:
           check_name: "Terraform Tests"
           status: "pending"
           description: "Terraform tests are running..."
+          github_token: ${{ steps.get-app-token.outputs.token }}
 
       - id: test
         name: "make test"
@@ -109,3 +125,4 @@ jobs:
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
             == 'failure' && 'failure' || 'error' }}
           description: "Terraform tests ${{ steps.test.outcome }}"
+          github_token: ${{ steps.get-app-token.outputs.token }}

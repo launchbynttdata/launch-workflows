@@ -4,22 +4,27 @@ Keeps a repository in sync with its upstream [Copier](https://copier.readthedocs
 
 ```mermaid
 flowchart TD
-  A[Workflow Triggered] --> B[Run copier update/recopy]
-  B --> C{Changes detected?}
-  C -- No --> D[Done]
-  C -- Yes --> E{Pre-commit passes?}
-  E -- Yes --> F[Create PR with auto-merge]
-  E -- No --> G[Create PR requiring manual review]
+  A[Workflow Triggered] --> B[Install asdf tools]
+  B --> C[Run copier update/recopy]
+  C --> D{Changes detected?}
+  D -- No --> E[Done]
+  D -- Yes --> F{Merge conflicts?}
+  F -- Yes --> G[Create PR requiring manual review]
+  F -- No --> H[Run all pre-commit checks]
+  H --> I[Create PR with auto-merge]
 ```
 
 ## Behavior
 
-1. **Copier update** — Runs `copier update --defaults --trust` to pull the latest changes from the skeleton template. If the repository's `prerelease` custom property is `true`, the `--prerelease` flag is added to pick up prerelease skeleton versions.
-2. **Recopy mode** — When `recopy` is set to `true`, runs `copier recopy --defaults --trust --overwrite` instead, which overwrites all templated files. Recopy PRs always require manual review.
-3. **Pre-commit validation** — If a `.pre-commit-config.yaml` exists, runs `check-merge-conflict` against all files to detect merge conflict markers.
-4. **Pull request creation**:
+1. **Tool installation** — Installs tools defined in the repository's `.tool-versions` file via asdf (with caching), then installs Copier and pre-commit via uv.
+2. **Copier update** — Runs `copier update --defaults --trust` to pull the latest changes from the skeleton template. If the repository's `prerelease` custom property is `true`, the `--prerelease` flag is added to pick up prerelease skeleton versions.
+3. **Recopy mode** — When `recopy` is set to `true`, runs `copier recopy --defaults --trust --overwrite` instead, which overwrites all templated files. Recopy PRs always require manual review.
+4. **Pre-commit validation** — If a `.pre-commit-config.yaml` exists, validation runs in two phases:
+   - First, `check-merge-conflict` runs against all files. If merge conflict markers are found, the PR is flagged for manual review.
+   - If no conflicts are found, all pre-commit hooks run against all files. Any automatic fixes (formatting, trailing whitespace, etc.) are included in the resulting commit.
+5. **Pull request creation**:
    - If pre-commit passes and recopy is not enabled, a PR titled `chore: update from skeleton` is created with auto-merge enabled.
-   - If pre-commit fails or recopy is enabled, a PR titled `fix: update from skeleton` is created and flagged for manual review. Any files with merge conflict markers are listed in the PR body.
+   - If pre-commit fails (merge conflicts) or recopy is enabled, a PR titled `fix: update from skeleton` is created and flagged for manual review. Any files with merge conflict markers are listed in the PR body.
 
 ## Usage
 

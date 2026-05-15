@@ -57,8 +57,8 @@ jobs:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
-      - name: Install asdf tools
-        run: asdf install
+      - name: Install asdf dependencies using Makefile
+        run: make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         name: Cache asdf tools

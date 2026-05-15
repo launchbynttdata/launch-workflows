@@ -58,7 +58,10 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: Install asdf dependencies using Makefile
-        run: make configure
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          make configure
 
       - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
         name: Cache asdf tools

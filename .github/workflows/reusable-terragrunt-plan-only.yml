@@ -59,6 +59,23 @@ on:
         required: false
         type: string
         default: ""
+    outputs:
+      added:
+        description: 'Number of resources to be created'
+        value: ${{ jobs.plan.outputs.added }}
+      updated:
+        description: 'Number of resources to be updated'
+        value: ${{ jobs.plan.outputs.updated }}
+      deleted:
+        description: 'Number of resources to be deleted'
+        value: ${{ jobs.plan.outputs.deleted }}
+      diagnostics:
+        description: 'Number of diagnostics/warnings'
+        value: ${{ jobs.plan.outputs.diagnostics }}
+      artifacts_name:
+        description: 'Name of uploaded artifact'
+        value: ${{ jobs.plan.outputs.artifact_name }}
+
     secrets:
       # --- Azure authentication secrets (required if auth_method includes 'azure') ---
       TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
@@ -163,6 +180,12 @@ jobs:
     name: "Plan ${{ inputs.tg_dir }}"
     runs-on: ubuntu-latest
     needs: validate-inputs
+    outputs:
+      added: ${{ steps.compute_summary.outputs.added }}
+      updated: ${{ steps.compute_summary.outputs.updated }}
+      deleted: ${{ steps.compute_summary.outputs.deleted }}
+      diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}
+      artifact_name: ${{ steps.set-artifact-name.outputs.artifact_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -277,3 +300,56 @@ jobs:
           description: "Terragrunt plan ${{ steps.plan.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
+
+      - name: Export plan JSON
+        shell: bash
+        run: |
+          # produce JSON plan (do not fail the job if plan failed to produce)
+          if [ -f "tfplan" ]; then
+            terragrunt show -json tfplan > plan.json || true
+          else
+            # if tfplan not present, try to show any plan possible
+            terragrunt plan -out=tfplan 2>/dev/null || true
+            terragrunt show -json tfplan > plan.json || true
+          fi
+
+      - name: Export Terraform outputs (if available)
+        shell: bash
+        run: |
+          terragrunt output -json > outputs.json || true
+
+      - name: Upload plan & outputs artifacts
+        id: upload-artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tf-artifacts-${{ github.run_id }}
+          path: |
+            plan.json
+            outputs.json
+
+      - name: Set artifact name output
+        id: set-artifact-name
+        shell: bash
+        run: |
+          ARTIFACT_NAME="tf-artifacts-${{ github.run_id }}"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Compute summary counts and set job outputs
+        id: compute_summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ADDED=0; UPDATED=0; DELETED=0; DIAGS=0
+          
+          if [ -f plan.json ] && [ -s plan.json ]; then
+            ADDED=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' plan.json 2>/dev/null || echo 0)
+            UPDATED=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' plan.json 2>/dev/null || echo 0)
+            DELETED=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' plan.json 2>/dev/null || echo 0)
+            DIAGS=$(jq -r '.diagnostics | length // 0' plan.json 2>/dev/null || echo 0)
+          fi
+          
+          # Emit small job outputs for callers
+          echo "added=$ADDED" >> "$GITHUB_OUTPUT"
+          echo "updated=$UPDATED" >> "$GITHUB_OUTPUT"
+          echo "deleted=$DELETED" >> "$GITHUB_OUTPUT"
+          echo "diagnostics=$DIAGS" >> "$GITHUB_OUTPUT"

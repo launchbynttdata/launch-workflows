@@ -238,6 +238,16 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 
 *These secrets are declared as optional at the workflow level to allow reuse across different auth methods, but the workflow will fail at the `validate-inputs` job if the required secrets for the selected `auth_method` are missing.
 
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| `added` | Number of resources to be created |
+| `updated` | Number of resources to be updated |
+| `deleted` | Number of resources to be deleted |
+| `diagnostics` | Number of diagnostics/warnings |
+| `artifacts_name` | Name of uploaded artifact |
+
 ## Migrating from the provider-specific workflows
 
 If you are currently using `reusable-terragrunt-plan-only-aws.yml`, replace the `uses` reference and add `auth_method: "aws"`. Several other inputs have been consolidated down to a `tg_dir` input:

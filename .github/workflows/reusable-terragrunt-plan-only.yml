@@ -305,33 +305,8 @@ jobs:
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 
-      - name: Export plan JSON
-        shell: bash
-        run: |
-          # produce JSON plan (do not fail the job if plan failed to produce)
-          if [ -f "tfplan" ]; then
-            terragrunt show -json tfplan > plan_raw.json || true
-          fi
 
-          if [ -f plan_raw.json ] && [ -s plan_raw.json ]; then
-            # Sanitize the plan JSON by redacting potentially sensitive fields (before, after, output_values, constant_value)
-            jq 'walk(if type == "object" then with_entries(if .key == "before" or .key == "after" or .key == "output_values" or .key == "constant_value" then .value = "***" else . end) else . end)' plan_raw.json > plan.json || cp plan_raw.json plan.json
-          fi
 
-      - name: Export Terraform outputs (if available)
-        shell: bash
-        run: | 
-          # Export Terraform outputs as JSON, filtering out any outputs marked as sensitive
-          terragrunt output -json | jq 'with_entries(select(.value.sensitive != true))' > outputs.json || echo '{}' > outputs.json
-
-      - name: Upload plan & outputs artifacts
-        id: upload-artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: tf-artifacts-${{ github.run_id }}
-          path: |
-            plan.json
-            outputs.json
 
       - name: Set artifact name output
         id: set-artifact-name
@@ -370,18 +345,19 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-  comment-plan-results:
-    name: Comment Plan Results
-    needs: plan
-    if: always() && github.event_name == 'pull_request' && (needs.plan.result == 'success' || needs.plan.result == 'failure')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
       - name: Comment Plan Results
-        uses: launchbynttdata/launch-workflows/.github/actions/comment-plan-results@ref
+        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        uses: borchero/terraform-plan-comment@d177dfb386476ca61eaf74adb9c0525745f29f921f2199
         with:
-          artifact_name: ${{ needs.plan.outputs.artifact_name }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Terragrunt Plan (${{ inputs.tg_dir }})"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          planfile: ./plan.json
+          pr-number: ${{ github.event.pull_request.number }}
+          header: "Terragrunt Plan (${{ inputs.tg_dir }})"
+          body: |
+            **Terragrunt Plan Summary for ${{ inputs.tg_dir }}**
+            - Added: ${{ steps.compute_summary.outputs.added }}
+            - Updated: ${{ steps.compute_summary.outputs.updated }}
+            - Deleted: ${{ steps.compute_summary.outputs.deleted }}
+            - Diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}
+
+            ${{ steps.compute_summary.outputs.diagnostic_summary && format('**Diagnostic Summary:**\n```\n{0}\n```', steps.compute_summary.outputs.diagnostic_summary) || '' }}

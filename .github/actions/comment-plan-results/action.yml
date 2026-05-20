@@ -1,0 +1,75 @@
+name: 'Comment Plan Results'
+description: 'Downloads Terraform/Terragrunt plan and output artifacts and comments on the PR with a summary.'
+
+inputs:
+  artifact_name:
+    description: 'Name of the artifact containing plan.json and outputs.json'
+    required: true
+  github_token:
+    description: 'GitHub token for commenting on the PR'
+    required: true
+    default: ${{ github.token }}
+  pr_number:
+    description: 'The pull request number to comment on'
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  comment_title:
+    description: 'Title for the PR comment'
+    required: false
+    default: 'Terraform Plan Results'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download plan artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact_name }}
+        path: ./tf-artifacts
+
+    - name: Parse plan summary
+      id: parse_plan
+      shell: bash
+      run: |
+        set -e
+        PLAN_JSON=./tf-artifacts/plan.json
+        if [ -f "$PLAN_JSON" ] && [ -s "$PLAN_JSON" ]; then
+          added=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' "$PLAN_JSON")
+          updated=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' "$PLAN_JSON")
+          deleted=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' "$PLAN_JSON")
+          diagnostics=$(jq -r '.diagnostics // [] | length' "$PLAN_JSON")
+        else
+          added=0; updated=0; deleted=0; diagnostics=0
+        fi
+        echo "added=$added" >> $GITHUB_OUTPUT
+        echo "updated=$updated" >> $GITHUB_OUTPUT
+        echo "deleted=$deleted" >> $GITHUB_OUTPUT
+        echo "diagnostics=$diagnostics" >> $GITHUB_OUTPUT
+
+    - name: Read outputs
+      id: read_outputs
+      shell: bash
+      run: |
+        OUTPUT_JSON=./tf-artifacts/outputs.json
+        if [ -f "$OUTPUT_JSON" ] && [ -s "$OUTPUT_JSON" ]; then
+          ephemeral_url=$(jq -r '.ephemeral_url.value // empty' "$OUTPUT_JSON")
+          echo "ephemeral_url=$ephemeral_url" >> $GITHUB_OUTPUT
+        else
+          echo "ephemeral_url=" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Comment on PR via Borchero action
+      if: inputs.pr_number != ''
+      uses: borchero/terraform-plan-comment@v3.0.0
+      with:
+        github_token: ${{ inputs.github_token }}
+        issue_number: ${{ inputs.pr_number }}
+        title: ${{ inputs.comment_title }}
+        body: |
+          **Terraform Plan Summary**
+          - Added: ${{ steps.parse_plan.outputs.added }}
+          - Updated: ${{ steps.parse_plan.outputs.updated }}
+          - Deleted: ${{ steps.parse_plan.outputs.deleted }}
+          - Diagnostics: ${{ steps.parse_plan.outputs.diagnostics }}
+
+          ${{ steps.read_outputs.outputs.ephemeral_url && format('**Endpoint:** {0}', steps.read_outputs.outputs.ephemeral_url) || '' }}

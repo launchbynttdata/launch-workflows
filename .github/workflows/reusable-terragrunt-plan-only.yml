@@ -72,6 +72,9 @@ on:
       diagnostics:
         description: 'Number of diagnostics/warnings'
         value: ${{ jobs.plan.outputs.diagnostics }}
+      diagnostic_summary:
+        description: 'Formatted summary of diagnostics/warnings'
+        value: ${{ jobs.plan.outputs.diagnostic_summary }}
       artifacts_name:
         description: 'Name of uploaded artifact'
         value: ${{ jobs.plan.outputs.artifact_name }}
@@ -185,6 +188,7 @@ jobs:
       updated: ${{ steps.compute_summary.outputs.updated }}
       deleted: ${{ steps.compute_summary.outputs.deleted }}
       diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}
+      diagnostic_summary: ${{ steps.compute_summary.outputs.diagnostic_summary }}
       artifact_name: ${{ steps.set-artifact-name.outputs.artifact_name }}
     steps:
       - name: Checkout
@@ -306,17 +310,19 @@ jobs:
         run: |
           # produce JSON plan (do not fail the job if plan failed to produce)
           if [ -f "tfplan" ]; then
-            terragrunt show -json tfplan > plan.json || true
-          else
-            # if tfplan not present, try to show any plan possible
-            terragrunt plan -out=tfplan 2>/dev/null || true
-            terragrunt show -json tfplan > plan.json || true
+            terragrunt show -json tfplan > plan_raw.json || true
+          fi
+
+          if [ -f plan_raw.json ] && [ -s plan_raw.json ]; then
+            # Sanitize the plan JSON by redacting potentially sensitive fields (before, after, output_values, constant_value)
+            jq 'walk(if type == "object" then with_entries(if .key == "before" or .key == "after" or .key == "output_values" or .key == "constant_value" then .value = "***" else . end) else . end)' plan_raw.json > plan.json || cp plan_raw.json plan.json
           fi
 
       - name: Export Terraform outputs (if available)
         shell: bash
-        run: |
-          terragrunt output -json > outputs.json || true
+        run: | 
+          # Export Terraform outputs as JSON, filtering out any outputs marked as sensitive
+          terragrunt output -json | jq 'with_entries(select(.value.sensitive != true))' > outputs.json || echo '{}' > outputs.json
 
       - name: Upload plan & outputs artifacts
         id: upload-artifacts
@@ -339,13 +345,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ADDED=0; UPDATED=0; DELETED=0; DIAGS=0
-          
+          ADDED=0; UPDATED=0; DELETED=0; DIAGS=0; DIAG_SUMMARY=""
           if [ -f plan.json ] && [ -s plan.json ]; then
+            # Count resources to be added, updated, or deleted using jq filters
             ADDED=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' plan.json 2>/dev/null || echo 0)
             UPDATED=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' plan.json 2>/dev/null || echo 0)
             DELETED=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' plan.json 2>/dev/null || echo 0)
+            
+            # Count the number of diagnostics (warnings/errors) in the plan
             DIAGS=$(jq -r '.diagnostics | length // 0' plan.json 2>/dev/null || echo 0)
+           
+            # Extract summary messages for diagnostics into a newline-separated string
+            DIAG_SUMMARY=$(jq -r '.diagnostics | map(.summary) | join("\n")' plan.json 2>/dev/null || echo "")
           fi
           
           # Emit small job outputs for callers
@@ -353,3 +364,24 @@ jobs:
           echo "updated=$UPDATED" >> "$GITHUB_OUTPUT"
           echo "deleted=$DELETED" >> "$GITHUB_OUTPUT"
           echo "diagnostics=$DIAGS" >> "$GITHUB_OUTPUT"
+          {
+            echo "diagnostic_summary<<EOF"
+            echo "$DIAG_SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  comment-plan-results:
+    name: Comment Plan Results
+    needs: plan
+    if: always() && github.event_name == 'pull_request' && (needs.plan.result == 'success' || needs.plan.result == 'failure')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Comment Plan Results
+        uses: launchbynttdata/launch-workflows/.github/actions/comment-plan-results@ref
+        with:
+          artifact_name: ${{ needs.plan.outputs.artifact_name }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment_title: "Terragrunt Plan (${{ inputs.tg_dir }})"

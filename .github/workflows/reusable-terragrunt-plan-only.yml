@@ -347,7 +347,7 @@ jobs:
 
       - name: Comment Plan Results
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: borchero/terraform-plan-comment@d177dfb386476ca61eaf74adb9c0525745f29f921f2199
+        uses: borchero/terraform-plan-comment@307d91e843c0800d36c2e35b7194605e55f0535e
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: ./plan.json

@@ -353,11 +353,3 @@ jobs:
           planfile: ./plan.json
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
-          body: |
-            **Terragrunt Plan Summary for ${{ inputs.tg_dir }}**
-            - Added: ${{ steps.compute_summary.outputs.added }}
-            - Updated: ${{ steps.compute_summary.outputs.updated }}
-            - Deleted: ${{ steps.compute_summary.outputs.deleted }}
-            - Diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}
-
-            ${{ steps.compute_summary.outputs.diagnostic_summary && format('**Diagnostic Summary:**\n```\n{0}\n```', steps.compute_summary.outputs.diagnostic_summary) || '' }}

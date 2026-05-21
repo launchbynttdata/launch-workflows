@@ -350,6 +350,6 @@ jobs:
         uses: borchero/terraform-plan-comment@d177dfb833ccfb6ef6022700796190dfe54830f1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: ./plan.json
+          planfile: .planfile
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"

@@ -292,7 +292,7 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: plan -out=068fd343a61676a2eb5c2801ad0bc29b1f1d3b68.tfplan
+          tg_command: "plan -out=${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -351,7 +351,7 @@ jobs:
         uses: borchero/terraform-plan-comment@d177dfb833ccfb6ef6022700796190dfe54830f1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: plan.json
+          planfile: "${{ github.sha }}.tfplan"
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"

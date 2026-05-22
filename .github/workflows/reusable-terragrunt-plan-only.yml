@@ -291,8 +291,8 @@ jobs:
         with:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
-          tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: "plan -out=${{ github.sha }}.tfplan"
+          tg_dir: platform/envs/launchbynttdata
+          tg_command: plan -out=068fd343a61676a2eb5c2801ad0bc29b1f1d3b68.tfplan
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -352,6 +352,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: plan.json
-          working-directory: ${{ inputs.tg_dir }}
+          working-directory: platform/envs/launchbynttdata
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"

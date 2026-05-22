@@ -276,6 +276,7 @@ jobs:
           INPUT_PRE_EXEC_0: |
             ${{ inputs.before_plan_commands }}
           INPUT_POST_EXEC_0: |
+            terragrunt show -json plan.tfplan > plan.json
             ${{ inputs.after_plan_commands }}
           TF_VAR_organization_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_repository_tag }}
@@ -292,7 +293,7 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: "plan"
+          tg_command: "plan -out=plan.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -317,6 +318,7 @@ jobs:
 
       - name: Compute summary counts and set job outputs
         id: compute_summary
+        working-directory: ${{ inputs.tg_dir }}
         shell: bash
         run: |
           set -euo pipefail
@@ -350,6 +352,7 @@ jobs:
         uses: borchero/terraform-plan-comment@d177dfb833ccfb6ef6022700796190dfe54830f1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          planfile: .planfile
+          planfile: plan.json
+          working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"

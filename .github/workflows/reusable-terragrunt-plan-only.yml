@@ -93,7 +93,7 @@ on:
 
 permissions:
   id-token: write
-  pull-requests: read
+  pull-requests: write
   contents: read
   statuses: write
 

@@ -305,8 +305,10 @@ jobs:
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 
-
-
+      - name: Debug
+        run: |
+          pwd
+          find . -name "*.tfplan"
 
       - name: Set artifact name output
         id: set-artifact-name

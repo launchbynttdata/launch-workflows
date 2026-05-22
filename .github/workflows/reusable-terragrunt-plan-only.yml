@@ -276,6 +276,8 @@ jobs:
           INPUT_PRE_EXEC_0: |
             ${{ inputs.before_plan_commands }}
           INPUT_POST_EXEC_0: |
+            ls -R
+            pwd
             terragrunt show -json plan.tfplan > plan.json
             ${{ inputs.after_plan_commands }}
           TF_VAR_organization_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_organization_tag }}

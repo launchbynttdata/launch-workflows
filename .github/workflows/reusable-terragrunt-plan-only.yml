@@ -292,7 +292,7 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: "plan -out=${{ github.sha }}.tfplan"
+          tg_command: "plan -out=${{ github.workspace }}/${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -305,10 +305,6 @@ jobs:
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 
-      - name: Debug
-        run: |
-          pwd
-          find . -name "*.tfplan"
 
       - name: Set artifact name output
         id: set-artifact-name
@@ -354,6 +350,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           planfile: "${{ github.sha }}.tfplan"
-          working-directory: ${{ inputs.tg_dir }}
+          working-directory: ${{ github.workspace }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"

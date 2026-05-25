@@ -28,20 +28,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: get-app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ inputs.status_check_app_id }}
           private-key: ${{ secrets.LAUNCH_STATUS_CHECK_KEY }}
 
       - name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       - name: Setup asdf
         # We use the 'setup' variant of this action, because we have some custom behavior in
         # our .tool-versions file and Makefile to install plugins from outside the default registry.
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
-      - uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         id: cache
@@ -65,7 +65,7 @@ jobs:
           export ARM_SUBSCRIPTION_ID="$TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID"
           make configure
 
-      - uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+      - uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         id: save-cache
         name: Cache asdf tools
@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -89,7 +89,7 @@ jobs:
 
       - name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -98,14 +98,14 @@ jobs:
           github_token: ${{ steps.get-app-token.outputs.token }}
 
       - name: Azure login
-        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
         with:
           client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
 
       - name: "Set Terraform Tests status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -119,7 +119,7 @@ jobs:
 
       - name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome

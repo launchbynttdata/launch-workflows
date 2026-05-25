@@ -115,14 +115,14 @@ jobs:
 
       - name: Get Approver Alpha Token
         id: approver-alpha-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ inputs.approver_alpha_app_id }}
           private-key: ${{ secrets.LAUNCH_APPROVER_ALPHA_KEY }}
 
       - name: Get Approver Bravo Token
         id: approver-bravo-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ inputs.approver_bravo_app_id }}
           private-key: ${{ secrets.LAUNCH_APPROVER_BRAVO_KEY }}

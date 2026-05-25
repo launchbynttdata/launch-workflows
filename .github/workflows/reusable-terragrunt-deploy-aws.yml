@@ -91,7 +91,7 @@ jobs:
       terraform_outputs: ${{ steps.set-outputs.outputs.terraform_outputs }}
     steps:
       - name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       - name: "Validate GitHub Environment"
         run: |
@@ -100,7 +100,7 @@ jobs:
           exit $raised
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885
         with:
           role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
           role-session-name: ${{ github.run_id }}
@@ -117,14 +117,14 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.4
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}
 
       - name: Plan
         id: plan
-        uses: gruntwork-io/terragrunt-action@5e86476ca61eaf74adb9c0525745f29f921f2199
+        uses: gruntwork-io/terragrunt-action@4ed5b7344c80315e5357f28f36159fc980bc2d5a
         env:
           AWS_REGION: ${{ inputs.region }}
           INPUT_PRE_EXEC_0: |
@@ -148,7 +148,7 @@ jobs:
             inputs.env_id }}.tfplan"
 
       - name: Deploy
-        uses: gruntwork-io/terragrunt-action@5e86476ca61eaf74adb9c0525745f29f921f2199
+        uses: gruntwork-io/terragrunt-action@4ed5b7344c80315e5357f28f36159fc980bc2d5a
         env:
           AWS_REGION: ${{ inputs.region }}
           INPUT_PRE_EXEC_0: |

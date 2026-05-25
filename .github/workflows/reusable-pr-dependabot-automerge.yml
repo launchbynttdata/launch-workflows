@@ -31,7 +31,7 @@ jobs:
       # Dependabot no longer owns the PR and subsequent actions runs that would otherwise be 
       # skipped for Dependabot-authored PRs (release on merge to main) will run as expected.
       - id: get-app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ inputs.skeleton_update_app_id }}
           private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}

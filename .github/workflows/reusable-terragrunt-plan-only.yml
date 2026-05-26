@@ -316,20 +316,22 @@ jobs:
         id: compute_summary
         working-directory: ${{ inputs.tg_dir }}
         shell: bash
+        env:
+          PLAN_JSON: ${{ github.sha }}.json
         run: |
           set -euo pipefail
           ADDED=0; UPDATED=0; DELETED=0; DIAGS=0; DIAG_SUMMARY=""
-          if [ -f plan.json ] && [ -s plan.json ]; then
+          if [ -f "$PLAN_JSON" ] && [ -s "$PLAN_JSON" ]; then
             # Count resources to be added, updated, or deleted using jq filters
-            ADDED=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' plan.json 2>/dev/null || echo 0)
-            UPDATED=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' plan.json 2>/dev/null || echo 0)
-            DELETED=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' plan.json 2>/dev/null || echo 0)
-            
+            ADDED=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
+            UPDATED=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
+            DELETED=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
+
             # Count the number of diagnostics (warnings/errors) in the plan
-            DIAGS=$(jq -r '.diagnostics | length // 0' plan.json 2>/dev/null || echo 0)
-           
+            DIAGS=$(jq -r '.diagnostics | length // 0' "$PLAN_JSON" 2>/dev/null || echo 0)
+
             # Extract summary messages for diagnostics into a newline-separated string
-            DIAG_SUMMARY=$(jq -r '.diagnostics | map(.summary) | join("\n")' plan.json 2>/dev/null || echo "")
+            DIAG_SUMMARY=$(jq -r '.diagnostics | map(.summary) | join("\n")' "$PLAN_JSON" 2>/dev/null || echo "")
           fi
           
           # Emit small job outputs for callers
@@ -344,6 +346,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Comment Plan Results
+        id: comment
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
         uses: borchero/terraform-plan-comment@d177dfb833ccfb6ef6022700796190dfe54830f1
         with:
@@ -353,3 +356,16 @@ jobs:
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
+
+      - name: View Borchero Outputs
+        run: |
+          echo "Borchero outputs:"
+          echo "Comment Markdown: ${{ steps.comment.outputs.markdown }}"
+          echo "Comment Empty: ${{ steps.comment.outputs.empty }}"
+          echo "Comment Change Summary: ${{ steps.comment.outputs.change-summary }}"
+          echo "Resources Created: ${{ steps.comment.outputs.num-resources-created }}"
+          echo "Resources Updated: ${{ steps.comment.outputs.num-resources-updated }}"
+          echo "Resources Deleted: ${{ steps.comment.outputs.num-resources-deleted }}"
+          echo "Resources Recreated: ${{ steps.comment.outputs.num-resources-recreated }}"
+          echo "Resources Ephemeral: ${{ steps.comment.outputs.num-resources-ephemeral }}"
+          echo "Resources Imported: ${{ steps.comment.outputs.num-resources-imported }}"

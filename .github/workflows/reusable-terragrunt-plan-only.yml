@@ -357,7 +357,7 @@ jobs:
       - name: Comment Plan Results
         id: comment
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: borchero/terraform-plan-comment@d177dfb833ccfb6ef6022700796190dfe54830f1
+        uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           terraform-cmd: terragrunt
@@ -367,6 +367,7 @@ jobs:
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
 
       - name: View All Outputs
+        working-directory: ${{ inputs.tg_dir }}
         run: |
           ls -al ${{ github.workspace }}/${{ inputs.tg_dir }}
 

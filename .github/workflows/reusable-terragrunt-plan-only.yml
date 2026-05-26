@@ -277,6 +277,8 @@ jobs:
             ${{ inputs.before_plan_commands }}
           INPUT_POST_EXEC_0: |
             ${{ inputs.after_plan_commands }}
+          INPUT_POST_EXEC_99: |
+            terragrunt show -json ${{ github.sha }}.tfplan > ${{ github.sha }}.json
           TF_VAR_organization_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_commit_hash_tag }}
@@ -357,10 +359,16 @@ jobs:
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
 
-      - name: View Borchero Outputs
+      - name: View All Outputs
         run: |
+          echo "Our outputs:"
+          echo "Added: ${{ steps.compute_summary.outputs.added }}"
+          echo "Updated: ${{ steps.compute_summary.outputs.updated }}"
+          echo "Deleted: ${{ steps.compute_summary.outputs.deleted }}"
+          echo "Diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}"
+          echo "Diagnostic Summary: ${{ steps.compute_summary.outputs.diagnostic_summary }}"
+
           echo "Borchero outputs:"
-          echo "Comment Markdown: ${{ steps.comment.outputs.markdown }}"
           echo "Comment Empty: ${{ steps.comment.outputs.empty }}"
           echo "Comment Change Summary: ${{ steps.comment.outputs.change-summary }}"
           echo "Resources Created: ${{ steps.comment.outputs.num-resources-created }}"

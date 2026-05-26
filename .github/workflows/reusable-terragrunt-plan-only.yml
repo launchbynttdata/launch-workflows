@@ -368,6 +368,8 @@ jobs:
 
       - name: View All Outputs
         run: |
+          ls -al ${{ github.workspace }}/${{ inputs.tg_dir }}
+
           echo "Our outputs:"
           echo "Added: ${{ steps.compute_summary.outputs.added }}"
           echo "Updated: ${{ steps.compute_summary.outputs.updated }}"

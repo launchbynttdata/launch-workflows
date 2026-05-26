@@ -370,6 +370,8 @@ jobs:
         run: |
           ls -al ${{ github.workspace }}/${{ inputs.tg_dir }}
 
+          terragrunt show -json ${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan | jq '.' | head -n 20 || echo "No plan JSON output found"
+
           echo "Our outputs:"
           echo "Added: ${{ steps.compute_summary.outputs.added }}"
           echo "Updated: ${{ steps.compute_summary.outputs.updated }}"

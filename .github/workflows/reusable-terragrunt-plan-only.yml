@@ -278,7 +278,7 @@ jobs:
           INPUT_POST_EXEC_0: |
             ${{ inputs.after_plan_commands }}
           INPUT_POST_EXEC_99: |
-            terragrunt show -json ${{ github.sha }}.tfplan > ${{ github.sha }}.json
+            terragrunt show -json ${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan > ${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.json
           TF_VAR_organization_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_organization_tag }}
           TF_VAR_repository_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_repository_tag }}
           TF_VAR_commit_hash_tag: ${{ steps.set-tags-aws.outputs.TF_VAR_commit_hash_tag }}
@@ -294,7 +294,7 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: "plan -out=${{ github.sha }}.tfplan"
+          tg_command: "plan -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'

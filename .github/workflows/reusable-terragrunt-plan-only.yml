@@ -314,6 +314,13 @@ jobs:
           ARTIFACT_NAME="tf-artifacts-${{ github.run_id }}"
           echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
 
+      - id: locate
+        working-directory: ${{ inputs.tg_dir }}
+        run: |
+          pwd
+          echo "${GITHUB_WORKSPACE}"
+          echo "${{ github.workspace }}"
+
       - name: Compute summary counts and set job outputs
         id: compute_summary
         working-directory: ${{ inputs.tg_dir }}

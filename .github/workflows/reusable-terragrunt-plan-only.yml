@@ -357,11 +357,12 @@ jobs:
       - name: Comment Plan Results
         id: comment
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        # uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
-        uses: chris11-taylor-nttd/terraform-plan-comment@main
+        uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
+        env:
+          TG_LOG_CUSTOM_FORMAT: "%msg(path=relative)"
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          terraform-cmd: "terragrunt --log-custom-format '%msg(path=relative)'"
+          terraform-cmd: "terragrunt"
           planfile: ${{ github.sha }}.tfplan
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}

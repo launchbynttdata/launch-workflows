@@ -49,6 +49,11 @@ on:
           to the repository root, e.g. platform/test/us-east-1/000)"
         required: true
         type: string
+      comment_plan_results:
+        description: "Whether to comment the plan results on the pull request (if applicable)"
+        required: false
+        type: boolean
+        default: true
       before_plan_commands:
         description: "Commands to run prior to executing Terragrunt plan."
         required: false
@@ -356,7 +361,7 @@ jobs:
 
       - name: Comment Plan Results
         id: comment
-        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure') && inputs.comment_plan_results == 'true'
         uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
         env:
           TG_LOG_CUSTOM_FORMAT: "%msg(path=relative)"

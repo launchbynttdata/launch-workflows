@@ -6,7 +6,7 @@ Plans a single Terragrunt environment. This workflow unifies the previously sepa
 
 Rather than utilizing a GitHub Environment (which may require approval for this plan-only scenario), this workflow takes authentication credentials directly. The typical use case for this workflow is to perform a plan against an upper environment, e.g. production, when the code is being PRed.
 
-When run from a `pull_request` event, the workflow posts (or updates) a comment on the PR summarizing the plan output using [`borchero/terraform-plan-comment`](https://github.com/borchero/terraform-plan-comment). This behavior can be disabled by setting `comment_plan_results: false`.
+This workflow will populate a summary of the plan in the GitHub Actions UI. When run from a `pull_request` event, the workflow posts (or updates) a comment on the PR summarizing the plan output using [`borchero/terraform-plan-comment`](https://github.com/borchero/terraform-plan-comment). This behavior can be disabled by setting `comment_plan_results: false`.
 
 ## Usage
 
@@ -254,7 +254,7 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `deleted` | Number of resources to be deleted |
 | `recreated` | Number of resources to be recreated |
 | `imported` | Number of resources to be imported |
-| `change_summary` | Human-readable summary of the resource changes |
+| `change_summary` | Human-readable summary of the resource changes. This is a multiline string, callers should account for large values and line breaks. |
 | `empty` | Whether the plan contains no changes (`"true"`/`"false"`) |
 
 ## Migrating from the provider-specific workflows

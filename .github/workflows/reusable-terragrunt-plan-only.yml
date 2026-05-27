@@ -50,7 +50,7 @@ on:
         required: true
         type: string
       comment_plan_results:
-        description: "Whether to comment the plan results on the pull request (if applicable)"
+        description: "Post a comment with the plan results when called from a pull request."
         required: false
         type: boolean
         default: true
@@ -67,25 +67,25 @@ on:
     outputs:
       added:
         description: 'Number of resources to be created'
-        value: ${{ jobs.plan.outputs.added }}
+        value: ${{ jobs.plan.outputs.added || '0' }}
       updated:
         description: 'Number of resources to be updated'
-        value: ${{ jobs.plan.outputs.updated }}
+        value: ${{ jobs.plan.outputs.updated || '0' }}
       deleted:
         description: 'Number of resources to be deleted'
-        value: ${{ jobs.plan.outputs.deleted }}
+        value: ${{ jobs.plan.outputs.deleted || '0' }}
       recreated:
         description: 'Number of resources to be recreated'
-        value: ${{ jobs.plan.outputs.recreated }}
+        value: ${{ jobs.plan.outputs.recreated || '0' }}
       imported:
         description: 'Number of resources to be imported'
-        value: ${{ jobs.plan.outputs.imported }}
+        value: ${{ jobs.plan.outputs.imported || '0' }}
       change_summary:
         description: 'Human-readable summary of the resource changes'
-        value: ${{ jobs.plan.outputs.change_summary }}
+        value: ${{ jobs.plan.outputs.change_summary || '' }}
       empty:
-        description: 'Whether the plan contains no changes ("true"/"false")'
-        value: ${{ jobs.plan.outputs.empty }}
+        description: 'Whether the plan contains no changes (true/false). Will be an empty string if the plan step was skipped.'
+        value: ${{ jobs.plan.outputs.empty || '' }}
 
     secrets:
       # --- Azure authentication secrets (required if auth_method includes 'azure') ---
@@ -301,6 +301,8 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
+          # Absolute path is used here to keep Terragrunt from burying the planfile in a 
+          # subdirectory, to make it more accessible to the comment action below.
           tg_command: "plan -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"

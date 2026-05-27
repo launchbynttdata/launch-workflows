@@ -316,7 +316,7 @@ jobs:
 
       - name: Comment Plan Results
         id: comment
-        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        if: always() && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
         uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
         env:
           TG_LOG_CUSTOM_FORMAT: "%msg(path=relative)"
@@ -327,4 +327,4 @@ jobs:
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
-          skip-comment: ${{ !inputs.comment_plan_results }}
+          skip-comment: ${{ github.event_name != 'pull_request' || !inputs.comment_plan_results }}

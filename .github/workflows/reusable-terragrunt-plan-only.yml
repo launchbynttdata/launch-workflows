@@ -49,6 +49,11 @@ on:
           to the repository root, e.g. platform/test/us-east-1/000)"
         required: true
         type: string
+      comment_plan_results:
+        description: "Post a comment with the plan results when called from a pull request."
+        required: false
+        type: boolean
+        default: true
       before_plan_commands:
         description: "Commands to run prior to executing Terragrunt plan."
         required: false
@@ -59,6 +64,29 @@ on:
         required: false
         type: string
         default: ""
+    outputs:
+      added:
+        description: 'Number of resources to be created'
+        value: ${{ jobs.plan.outputs.added || '0' }}
+      updated:
+        description: 'Number of resources to be updated'
+        value: ${{ jobs.plan.outputs.updated || '0' }}
+      deleted:
+        description: 'Number of resources to be deleted'
+        value: ${{ jobs.plan.outputs.deleted || '0' }}
+      recreated:
+        description: 'Number of resources to be recreated'
+        value: ${{ jobs.plan.outputs.recreated || '0' }}
+      imported:
+        description: 'Number of resources to be imported'
+        value: ${{ jobs.plan.outputs.imported || '0' }}
+      change_summary:
+        description: 'Human-readable summary of the resource changes'
+        value: ${{ jobs.plan.outputs.change_summary || '' }}
+      empty:
+        description: 'Whether the plan contains no changes (true/false). Will be an empty string if the plan step was skipped.'
+        value: ${{ jobs.plan.outputs.empty || '' }}
+
     secrets:
       # --- Azure authentication secrets (required if auth_method includes 'azure') ---
       TERRAGRUNT_DEPLOY_AZURE_CLIENT_ID:
@@ -73,7 +101,7 @@ on:
 
 permissions:
   id-token: write
-  pull-requests: read
+  pull-requests: write
   contents: read
   statuses: write
 
@@ -163,6 +191,14 @@ jobs:
     name: "Plan ${{ inputs.tg_dir }}"
     runs-on: ubuntu-latest
     needs: validate-inputs
+    outputs:
+      added: ${{ steps.comment.outputs.num-resources-created }}
+      updated: ${{ steps.comment.outputs.num-resources-updated }}
+      deleted: ${{ steps.comment.outputs.num-resources-deleted }}
+      recreated: ${{ steps.comment.outputs.num-resources-recreated }}
+      imported: ${{ steps.comment.outputs.num-resources-imported }}
+      change_summary: ${{ steps.comment.outputs.change-summary }}
+      empty: ${{ steps.comment.outputs.empty }}
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -265,7 +301,9 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          tg_command: "plan"
+          # Absolute path is used here to keep Terragrunt from burying the planfile in a 
+          # subdirectory, to make it more accessible to the comment action below.
+          tg_command: "plan -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -277,3 +315,18 @@ jobs:
           description: "Terragrunt plan ${{ steps.plan.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
+
+      - name: Comment Plan Results
+        id: comment
+        if: always() && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
+        uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
+        env:
+          TG_LOG_CUSTOM_FORMAT: "%msg(path=relative)"
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          terraform-cmd: "terragrunt"
+          planfile: ${{ github.sha }}.tfplan
+          working-directory: ${{ inputs.tg_dir }}
+          pr-number: ${{ github.event.pull_request.number }}
+          header: "Terragrunt Plan (${{ inputs.tg_dir }})"
+          skip-comment: ${{ github.event_name != 'pull_request' || !inputs.comment_plan_results }}

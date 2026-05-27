@@ -74,15 +74,18 @@ on:
       deleted:
         description: 'Number of resources to be deleted'
         value: ${{ jobs.plan.outputs.deleted }}
-      diagnostics:
-        description: 'Number of diagnostics/warnings'
-        value: ${{ jobs.plan.outputs.diagnostics }}
-      diagnostic_summary:
-        description: 'Formatted summary of diagnostics/warnings'
-        value: ${{ jobs.plan.outputs.diagnostic_summary }}
-      artifacts_name:
-        description: 'Name of uploaded artifact'
-        value: ${{ jobs.plan.outputs.artifact_name }}
+      recreated:
+        description: 'Number of resources to be recreated'
+        value: ${{ jobs.plan.outputs.recreated }}
+      imported:
+        description: 'Number of resources to be imported'
+        value: ${{ jobs.plan.outputs.imported }}
+      change_summary:
+        description: 'Human-readable summary of the resource changes'
+        value: ${{ jobs.plan.outputs.change_summary }}
+      empty:
+        description: 'Whether the plan contains no changes ("true"/"false")'
+        value: ${{ jobs.plan.outputs.empty }}
 
     secrets:
       # --- Azure authentication secrets (required if auth_method includes 'azure') ---
@@ -189,12 +192,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate-inputs
     outputs:
-      added: ${{ steps.compute_summary.outputs.added }}
-      updated: ${{ steps.compute_summary.outputs.updated }}
-      deleted: ${{ steps.compute_summary.outputs.deleted }}
-      diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}
-      diagnostic_summary: ${{ steps.compute_summary.outputs.diagnostic_summary }}
-      artifact_name: ${{ steps.set-artifact-name.outputs.artifact_name }}
+      added: ${{ steps.comment.outputs.num-resources-created }}
+      updated: ${{ steps.comment.outputs.num-resources-updated }}
+      deleted: ${{ steps.comment.outputs.num-resources-deleted }}
+      recreated: ${{ steps.comment.outputs.num-resources-recreated }}
+      imported: ${{ steps.comment.outputs.num-resources-imported }}
+      change_summary: ${{ steps.comment.outputs.change-summary }}
+      empty: ${{ steps.comment.outputs.empty }}
     steps:
       - name: Checkout
         uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
@@ -312,23 +316,9 @@ jobs:
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 
-      - name: Set artifact name output
-        id: set-artifact-name
-        shell: bash
-        run: |
-          ARTIFACT_NAME="tf-artifacts-${{ github.run_id }}"
-          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-
-      - id: locate
-        working-directory: ${{ inputs.tg_dir }}
-        run: |
-          pwd
-          echo "${GITHUB_WORKSPACE}"
-          echo "${{ github.workspace }}"
-
       - name: Comment Plan Results
         id: comment
-        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure') && inputs.comment_plan_results == 'true'
+        if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
         uses: borchero/terraform-plan-comment@2d41e908725447b1677913001dfb92fa7010c025
         env:
           TG_LOG_CUSTOM_FORMAT: "%msg(path=relative)"
@@ -339,3 +329,4 @@ jobs:
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
+          skip-comment: ${{ !inputs.comment_plan_results }}

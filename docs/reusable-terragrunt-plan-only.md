@@ -6,6 +6,8 @@ Plans a single Terragrunt environment. This workflow unifies the previously sepa
 
 Rather than utilizing a GitHub Environment (which may require approval for this plan-only scenario), this workflow takes authentication credentials directly. The typical use case for this workflow is to perform a plan against an upper environment, e.g. production, when the code is being PRed.
 
+When run from a `pull_request` event, the workflow posts (or updates) a comment on the PR summarizing the plan output using [`borchero/terraform-plan-comment`](https://github.com/borchero/terraform-plan-comment). This behavior can be disabled by setting `comment_plan_results: false`.
+
 ## Usage
 
 ### AWS authentication (`auth_method: aws`)
@@ -39,6 +41,7 @@ jobs:
       contents: read
       id-token: write
       statuses: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
@@ -87,6 +90,7 @@ jobs:
       contents: read
       id-token: write
       statuses: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
@@ -140,6 +144,7 @@ jobs:
       contents: read
       id-token: write
       statuses: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
@@ -191,6 +196,7 @@ jobs:
       contents: read
       id-token: write
       statuses: write
+      pull-requests: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
@@ -224,6 +230,7 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `aws_auth_region` | AWS region to use for authentication. Required when `auth_method` includes `aws`. | No | — |
 | `aws_assume_role_arn` | ARN of the role to assume prior to Terragrunt invocation. Required when `auth_method` includes `aws`. | No | — |
 | `github_app_id` | GitHub App ID for authentication. Required when `auth_method` includes `github`. Defaults to `vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID`. | No | `${{ vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID }}` |
+| `comment_plan_results` | When `true` (and the workflow is triggered by a `pull_request` event), post a comment on the PR summarizing the plan output via [`borchero/terraform-plan-comment`](https://github.com/borchero/terraform-plan-comment). | No | `true` |
 | `before_plan_commands` | Commands to run prior to executing Terragrunt plan. | No | `""` |
 | `after_plan_commands` | Commands to run after executing Terragrunt plan. | No | `""` |
 
@@ -245,8 +252,10 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `added` | Number of resources to be created |
 | `updated` | Number of resources to be updated |
 | `deleted` | Number of resources to be deleted |
-| `diagnostics` | Number of diagnostics/warnings |
-| `diagnostic_summary` | Formatted summary of diagnostics/warnings |
+| `recreated` | Number of resources to be recreated |
+| `imported` | Number of resources to be imported |
+| `change_summary` | Human-readable summary of the resource changes |
+| `empty` | Whether the plan contains no changes (`"true"`/`"false"`) |
 | `artifacts_name` | Name of uploaded artifact |
 
 ## Migrating from the provider-specific workflows

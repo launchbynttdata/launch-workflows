@@ -357,7 +357,7 @@ jobs:
       - name: Comment Plan Results
         id: comment
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure')
-        uses: chris11-taylor-nttd/terraform-plan-comment@2d6b074d05809239b6326cc961f01939e2aad893
+        uses: chris11-taylor-nttd/terraform-plan-comment@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           terraform-cmd: terragrunt

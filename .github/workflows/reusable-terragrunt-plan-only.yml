@@ -326,39 +326,6 @@ jobs:
           echo "${GITHUB_WORKSPACE}"
           echo "${{ github.workspace }}"
 
-      - name: Compute summary counts and set job outputs
-        id: compute_summary
-        working-directory: ${{ inputs.tg_dir }}
-        shell: bash
-        env:
-          PLAN_JSON: ${{ github.sha }}.json
-        run: |
-          set -euo pipefail
-          ADDED=0; UPDATED=0; DELETED=0; DIAGS=0; DIAG_SUMMARY=""
-          if [ -f "$PLAN_JSON" ] && [ -s "$PLAN_JSON" ]; then
-            # Count resources to be added, updated, or deleted using jq filters
-            ADDED=$(jq '[.resource_changes[] | select(.change.actions | index("create"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
-            UPDATED=$(jq '[.resource_changes[] | select(.change.actions | index("update"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
-            DELETED=$(jq '[.resource_changes[] | select(.change.actions | index("delete"))] | length' "$PLAN_JSON" 2>/dev/null || echo 0)
-
-            # Count the number of diagnostics (warnings/errors) in the plan
-            DIAGS=$(jq -r '.diagnostics | length // 0' "$PLAN_JSON" 2>/dev/null || echo 0)
-
-            # Extract summary messages for diagnostics into a newline-separated string
-            DIAG_SUMMARY=$(jq -r '.diagnostics | map(.summary) | join("\n")' "$PLAN_JSON" 2>/dev/null || echo "")
-          fi
-          
-          # Emit small job outputs for callers
-          echo "added=$ADDED" >> "$GITHUB_OUTPUT"
-          echo "updated=$UPDATED" >> "$GITHUB_OUTPUT"
-          echo "deleted=$DELETED" >> "$GITHUB_OUTPUT"
-          echo "diagnostics=$DIAGS" >> "$GITHUB_OUTPUT"
-          {
-            echo "diagnostic_summary<<EOF"
-            echo "$DIAG_SUMMARY"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Comment Plan Results
         id: comment
         if: always() && github.event_name == 'pull_request' && (steps.plan.outcome == 'success' || steps.plan.outcome == 'failure') && inputs.comment_plan_results == 'true'
@@ -372,27 +339,3 @@ jobs:
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
           header: "Terragrunt Plan (${{ inputs.tg_dir }})"
-
-      - name: View All Outputs
-        working-directory: ${{ inputs.tg_dir }}
-        run: |
-          ls -al ${{ github.workspace }}/${{ inputs.tg_dir }}
-
-          terragrunt show -json ${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan | jq '.' | head -n 20 || echo "No plan JSON output found"
-
-          echo "Our outputs:"
-          echo "Added: ${{ steps.compute_summary.outputs.added }}"
-          echo "Updated: ${{ steps.compute_summary.outputs.updated }}"
-          echo "Deleted: ${{ steps.compute_summary.outputs.deleted }}"
-          echo "Diagnostics: ${{ steps.compute_summary.outputs.diagnostics }}"
-          echo "Diagnostic Summary: ${{ steps.compute_summary.outputs.diagnostic_summary }}"
-
-          echo "Borchero outputs:"
-          echo "Comment Empty: ${{ steps.comment.outputs.empty }}"
-          echo "Comment Change Summary: ${{ steps.comment.outputs.change-summary }}"
-          echo "Resources Created: ${{ steps.comment.outputs.num-resources-created }}"
-          echo "Resources Updated: ${{ steps.comment.outputs.num-resources-updated }}"
-          echo "Resources Deleted: ${{ steps.comment.outputs.num-resources-deleted }}"
-          echo "Resources Recreated: ${{ steps.comment.outputs.num-resources-recreated }}"
-          echo "Resources Ephemeral: ${{ steps.comment.outputs.num-resources-ephemeral }}"
-          echo "Resources Imported: ${{ steps.comment.outputs.num-resources-imported }}"

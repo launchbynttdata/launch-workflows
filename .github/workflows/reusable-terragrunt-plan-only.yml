@@ -360,7 +360,7 @@ jobs:
         uses: chris11-taylor-nttd/terraform-plan-comment@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          terraform-cmd: terragrunt
+          terraform-cmd: "terragrunt --log-custom-format '%msg(path=relative)'"
           planfile: ${{ github.sha }}.tfplan
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}

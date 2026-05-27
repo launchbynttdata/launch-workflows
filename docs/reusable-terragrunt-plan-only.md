@@ -256,7 +256,6 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `imported` | Number of resources to be imported |
 | `change_summary` | Human-readable summary of the resource changes |
 | `empty` | Whether the plan contains no changes (`"true"`/`"false"`) |
-| `artifacts_name` | Name of uploaded artifact |
 
 ## Migrating from the provider-specific workflows
 

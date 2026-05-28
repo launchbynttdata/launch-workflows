@@ -183,7 +183,7 @@ jobs:
 | `git_branch` | Branch triggering this deployment. | Yes | — |
 | `tf_version` | Version of Terraform to utilize. | Yes | `1.5.5` |
 | `tg_version` | Version of Terragrunt to utilize. | Yes | — |
-| `gh_environment` | GitHub Environment to deploy to (e.g. test, production). | No | — |
+| `gh_environment` | GitHub Environment to deploy to (e.g. test, production). Leave blank to use repo-level values. | No | — |
 | `tg_dir` | Folder containing the Terragrunt configuration to deploy (relative to the repository root). | Yes | — |
 | `aws_auth_region` | AWS region to use for authentication. Required when `auth_method` includes `aws`. | No | — |
 | `aws_assume_role_arn` | ARN of the role to assume prior to Terragrunt invocation. Required when `auth_method` includes `aws`. Defaults to `vars.DEPLOY_ROLE_ARN`. | No | `${{ vars.DEPLOY_ROLE_ARN }}` |

@@ -47,7 +47,7 @@ on:
         required: true
         type: string
       gh_environment:
-        description: "GitHub Environment to deploy to (e.g. test, production)."
+        description: "GitHub Environment to deploy to (e.g. test, production). Leave blank to use repo-level values."
         required: false
         type: string
       tg_dir:

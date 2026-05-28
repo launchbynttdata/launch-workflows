@@ -53,6 +53,7 @@ jobs:
       tf_version: ${{ needs.get-tg-versions.outputs.tf_version }}
       tg_version: ${{ needs.get-tg-versions.outputs.tg_version }}
       tg_dir: "platform/${{ matrix.terragrunt_environment.environment }}/${{ matrix.terragrunt_environment.region }}/${{ matrix.terragrunt_environment.instance }}"
+      gh_environment: ${{ matrix.terragrunt_environment.environment }}
       aws_auth_region: "us-east-2"
       aws_assume_role_arn: "arn:aws:iam::123456789012:role/my-assumed-role"
 ```
@@ -227,6 +228,7 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `tf_version` | Version of Terraform to utilize. | Yes | `1.5.5` |
 | `tg_version` | Version of Terragrunt to utilize. | Yes | — |
 | `tg_dir` | Folder containing the Terragrunt configuration to plan (relative to the repository root). | Yes | — |
+| `gh_environment` | GitHub Environment to deploy to (e.g. test, production). Leave blank to use repo-level values. | No | — |
 | `aws_auth_region` | AWS region to use for authentication. Required when `auth_method` includes `aws`. | No | — |
 | `aws_assume_role_arn` | ARN of the role to assume prior to Terragrunt invocation. Required when `auth_method` includes `aws`. | No | — |
 | `github_app_id` | GitHub App ID for authentication. Required when `auth_method` includes `github`. Defaults to `vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID`. | No | `${{ vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID }}` |

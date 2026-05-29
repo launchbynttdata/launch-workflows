@@ -36,9 +36,13 @@ repos:
       - id: uv-lock
         stages:
           - pre-commit
+        files: ^pyproject\.toml|^uv\.lock$
       - id: uv-sync
         stages:
           - pre-commit
+        files: ^pyproject\.toml|^uv\.lock$
+      - id: uv-sync
+        stages:
           - post-checkout
           - post-merge
           - post-rewrite

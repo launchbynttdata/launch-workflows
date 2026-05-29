@@ -49,6 +49,10 @@ on:
           to the repository root, e.g. platform/test/us-east-1/000)"
         required: true
         type: string
+      gh_environment:
+        description: "GitHub Environment to deploy to (e.g. test, production). Leave blank to use repo-level values."
+        required: false
+        type: string
       comment_plan_results:
         description: "Post a comment with the plan results when called from a pull request."
         required: false
@@ -109,6 +113,9 @@ jobs:
   validate-inputs:
     name: "Validate Inputs"
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.gh_environment }}
+      deployment: false
     outputs:
       auth_aws: ${{ steps.validate.outputs.auth_aws }}
       auth_azure: ${{ steps.validate.outputs.auth_azure }}
@@ -190,6 +197,9 @@ jobs:
   plan:
     name: "Plan ${{ inputs.tg_dir }}"
     runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.gh_environment }}
+      deployment: false
     needs: validate-inputs
     outputs:
       added: ${{ steps.comment.outputs.num-resources-created }}

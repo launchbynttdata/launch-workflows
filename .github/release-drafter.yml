@@ -13,37 +13,53 @@ template: |
 categories:
   - title: ":warning: Breaking Changes"
     labels:
-      - "major"
+      - "breaking change"
   - title: "🚀 Features"
     labels:
-      - "minor"
+      - "feature"
   - title: "🔧 Fixes"
     collapse-after: 3
     labels:
-      - "patch"
-
-autolabeler:
-  - label: "major"
-    branch:
-      - '/(patch|bug|fix|feature)!\/.+/'
-  - label: "minor"
-    branch:
-      - '/feature\/.+/'
-  - label: "patch"
-    branch:
-      - '/(patch|bug|fix)\/.+/'
+      - "fix"
+  - title: "📝 Documentation"
+    collapse-after: 3
+    labels:
+      - "documentation"
+  - title: "🧪 Test"
+    collapse-after: 3
+    labels:
+      - "test"
+  - title: "⚙️ CI/CD"
+    collapse-after: 3
+    labels:
+      - "CI/CD"
+  - title: "♻️ Refactor"
+    collapse-after: 3
+    labels:
+      - "refactor"
+  - title: "⚡ Performance"
+    collapse-after: 3
+    labels:
+      - "performance"
+  - title: "🧹 Chore"
+    collapse-after: 3
+    labels:
+      - "chore"
+  - title: "⏪ Revert"
+    collapse-after: 3
+    labels:
+      - "revert"
 
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 
 version-resolver:
   major:
     labels:
-      - "major"
+      - "breaking change"
   minor:
     labels:
-      - "minor"
-  patch:
-    labels:
-      - "patch"
-      - "dependencies"
+      - "feature"
   default: patch
+
+exclude-labels:
+  - "skip-changelog"

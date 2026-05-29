@@ -157,4 +157,3 @@ with:
   auth_method: ${{ startsWith(github.event.repository.name, 'tf-aws') && 'aws' || startsWith(github.event.repository.name, 'tf-az') && 'azure' || 'none' }}
 secrets: inherit # pragma: allowlist secret
 ```
-

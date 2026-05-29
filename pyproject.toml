@@ -1,0 +1,7 @@
+[project]
+name = "launch-workflows"
+version = "0.1.0"
+description = "Shared GitHub Actions workflows maintained by Launch"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "Apache 2.0"}

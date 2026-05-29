@@ -1,0 +1,52 @@
+default_install_hook_types:
+  - pre-commit
+  - post-checkout
+  - post-merge
+  - post-rewrite
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-json
+      - id: check-merge-conflict
+        args:
+          - --assume-in-merge
+      - id: check-shebang-scripts-are-executable
+      - id: check-yaml
+        args:
+          - --allow-multiple-documents
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args:
+          - --fix=auto
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [ "--baseline", ".secrets.baseline" ]
+        exclude: package.lock.json
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.9.7
+    hooks:
+      # Update the uv lockfile
+      - id: uv-lock
+        stages:
+          - pre-commit
+      - id: uv-sync
+        stages:
+          - pre-commit
+          - post-checkout
+          - post-merge
+          - post-rewrite
+  - repo: local
+    hooks:
+      - id: lint-documentation-must-exist-for-reusable-workflows
+        name: Documentation must exist for reusable workflows
+        entry: scripts/check_documentation_exists.py
+        language: python
+        files: "(\\.github/workflows/reusable-.*\\.ya?ml)$"
+        pass_filenames: false

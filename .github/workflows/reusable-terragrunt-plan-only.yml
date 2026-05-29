@@ -311,7 +311,7 @@ jobs:
           tf_path: "terraform"
           tg_version: ${{ inputs.tg_version }}
           tg_dir: "${{ inputs.tg_dir }}"
-          # Absolute path is used here to keep Terragrunt from burying the planfile in a 
+          # Absolute path is used here to keep Terragrunt from burying the planfile in a
           # subdirectory, to make it more accessible to the comment action below.
           tg_command: "plan -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
 

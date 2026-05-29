@@ -23,7 +23,7 @@ sequenceDiagram
   Human->>Release: Set drafted release to published
   Release->>-Repository: Create tag 1.1.0
   Note right of Release: Publishing a release creates<br /> a new tag and can trigger other<br/>workflows like publishing to a<br />package manager.
-  Note left of Human: The cycle restarts with a new<br />draft release ready to be published<br/>whenever the team is ready. 
+  Note left of Human: The cycle restarts with a new<br />draft release ready to be published<br/>whenever the team is ready.
   Human->>Repository: Merge Pull Request 3 (feature)
   Repository->>Release: Draft a release with tag 1.2.0
 ```

@@ -28,7 +28,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' }}
     steps:
       # By passing the token of a GitHub app and having that identity perform the auto-merge,
-      # Dependabot no longer owns the PR and subsequent actions runs that would otherwise be 
+      # Dependabot no longer owns the PR and subsequent actions runs that would otherwise be
       # skipped for Dependabot-authored PRs (release on merge to main) will run as expected.
       - id: get-app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3

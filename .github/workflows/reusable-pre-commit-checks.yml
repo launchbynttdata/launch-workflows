@@ -1,0 +1,90 @@
+name: Dependabot Auto-Merge
+
+on:
+  workflow_call:
+    inputs:
+      # Placeholder input: this workflow currently takes no real inputs, but
+      # `workflow_call` requires the `inputs` map to be present.
+      _placeholder:
+        description: "Unused. Reserved for future use; do not set."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+jobs:
+  pre-commit:
+    name: Pre-Commit Checks
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: Checkout code
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: setup-python
+        name: Set up Python 3.14
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          python-version: 3.14
+
+      - id: install-tools
+        name: Install Tools with uv
+        run: |
+          uv tool install pre-commit --with pre-commit-uv
+
+      # If we've cached the pre-commit environment, restore it based on the hash of the pre-commit config.
+      - id: cache
+        name: Restore cached pre-commit environment
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - id: setup-asdf
+        name: Setup ASDF
+        uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: restore-asdf-tools
+        name: Restore ASDF tools from cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          key: ${{ runner.os }}-asdf-${{ hashFiles('.tool-versions') }}
+          restore-keys: |
+            ${{ runner.os }}-asdf-
+          path: |
+            ~/.asdf/plugins
+            ~/.asdf/installs
+
+      - id: install-asdf
+        name: Install ASDF tools on cache-miss
+        if: ${{ steps.restore-asdf-tools.outputs.cache-hit != 'true' }}
+        uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: asdf-reshim
+        name: Reshim installed ASDF tools
+        run: asdf reshim
+
+      - id: pre-commit
+        name: Run pre-commit checks
+        run: |
+          uv run pre-commit run --all-files
+
+      - id: set-status-check
+        name: Set Status Check
+        if: always()
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@edddecdce4590f94f30d0fdfdf991d8a692fe8dd
+        with:
+          check_name: "Pre-Commit Checks"
+          status: ${{ steps.pre-commit.outcome == 'success' && 'success' ||
+            steps.pre-commit.outcome == 'failure' && 'failure' || 'error' }}
+          description: "Pre-Commit Checks ${{steps.pre-commit.outcome }}"
+          target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}"

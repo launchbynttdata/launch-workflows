@@ -21,7 +21,7 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
       - name: Configure missing labels
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,7 +39,7 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
         with:
           fetch-depth: 0
       - name: Check prerequisites for auto-labeling
@@ -79,7 +79,7 @@ jobs:
 
           rm first-time-comment.md
 
-      - uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@0.14.2
+      - uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@0.15.4
         if: ${{ inputs.remove_dependabot_labels }}
         id: remove-dependabot-labels
         with:

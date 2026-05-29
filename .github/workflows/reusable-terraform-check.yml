@@ -141,7 +141,7 @@ jobs:
     steps:
       - id: checkout
         name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       - id: dependencies
         name: Setup asdf
@@ -150,7 +150,7 @@ jobs:
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
       - id: cache-restore
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         with:
@@ -172,7 +172,7 @@ jobs:
           make configure
 
       - id: save-cache
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         name: Cache asdf tools
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -182,7 +182,7 @@ jobs:
 
       - id: set-lint-pending
         name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -198,7 +198,7 @@ jobs:
       - id: update-lint-status
         name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -214,7 +214,7 @@ jobs:
     steps:
       - id: checkout
         name: Checkout
-        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       - id: dependencies
         name: Setup asdf
@@ -223,7 +223,7 @@ jobs:
         uses: asdf-vm/actions/setup@b7bcd026f18772e44fe1026d729e1611cc435d47
 
       - id: cache-restore
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         # If we've cached the asdf tools, restore them based on the hash of the .tool-versions file.
         name: Restore cached asdf tools
         with:
@@ -255,7 +255,7 @@ jobs:
           make configure
 
       - id: save-cache
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         name: Cache asdf tools
         # If we didn't restore the asdf tools, save them based on the hash of the .tool-versions file.
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -266,7 +266,7 @@ jobs:
       - id: configure-aws-credentials
         name: Configure AWS credentials
         if: needs.validate-inputs.outputs.auth_aws == 'true'
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885
         with:
           role-to-assume: ${{ inputs.aws_assume_role_arn }}
           role-session-name: ${{ github.run_id }}
@@ -292,7 +292,7 @@ jobs:
       - id: azure-login
         name: Azure login
         if: needs.validate-inputs.outputs.auth_azure == 'true'
-        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43
         with:
           client-id: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
@@ -301,7 +301,7 @@ jobs:
       - id: github-app-token
         name: Create GitHub App Token
         if: needs.validate-inputs.outputs.auth_github == 'true'
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           app-id: ${{ inputs.github_app_id }}
           private-key: ${{ secrets.TERRAFORM_CHECK_GITHUB_APP_SECRET }}
@@ -310,7 +310,7 @@ jobs:
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -332,7 +332,7 @@ jobs:
         name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
@@ -352,7 +352,7 @@ jobs:
       - id: update-legacy-status-checks-aws
         name: "Add AWS Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-aws-')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
           status: "success"
@@ -364,7 +364,7 @@ jobs:
       - id: update-legacy-status-checks-azure
         name: "Add Azure Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-az')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.4
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: "success"

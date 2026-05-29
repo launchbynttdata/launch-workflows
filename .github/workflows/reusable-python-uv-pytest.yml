@@ -49,10 +49,10 @@ jobs:
       matrix:
         python-version: [ "${{ inputs.python-version }}" ]
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       - name: Restore cached asdf tools
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         if: ${{ inputs.asdf-install }}
         id: cache
         with:
@@ -64,7 +64,7 @@ jobs:
         uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47
 
       - name: Cache asdf tools
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         id: save-cache
         if: ${{ inputs.asdf-install && steps.cache.outputs.cache-hit != 'true' }}
         with:
@@ -72,7 +72,7 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Report coverage
         if: ${{ inputs.report-coverage }}
-        uses: MishaKav/pytest-coverage-comment@26f986d2599c288bb62f623d29c2da98609e9cd4
+        uses: MishaKav/pytest-coverage-comment@dd5b80bde6d16941f336518e92929e89069d8451
         with:
           pytest-xml-coverage-path: ./htmlcov/coverage.xml
           title: Coverage report for Python ${{ matrix.python-version }}

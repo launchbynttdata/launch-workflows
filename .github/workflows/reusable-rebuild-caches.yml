@@ -1,0 +1,68 @@
+name: Rebuild Caches
+on:
+  workflow_call:
+    inputs:
+      cache_precommit:
+        description: "Rebuild and persist the cache for pre-commit."
+        required: false
+        type: boolean
+        default: true
+      cache_asdf:
+        description: "Rebuild and persist the cache for ASDF tools."
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild-caches:
+    name: Rebuild Caches
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: Checkout
+        uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+
+      - id: setup-python
+        name: Set up Python 3.14
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          python-version: 3.14
+
+      - id: install-tools
+        if: ${{ inputs.cache_precommit }}
+        name: Install Tools with uv
+        run: |
+          uv tool install pre-commit --with pre-commit-uv
+
+      - id: asdf-install
+        if: ${{ inputs.cache_asdf }}
+        name: Setup tools using asdf
+        uses: asdf-vm/actions/install@b7bcd026f18772e44fe1026d729e1611cc435d47
+
+      - id: pre-commit
+        if: ${{ inputs.cache_precommit }}
+        name: Run pre-commit checks
+        run: uv run pre-commit install-hooks
+
+      - id: save-pre-commit-cache
+        if: ${{ inputs.cache_precommit }}
+        name: Save pre-commit cache
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: ~/.cache/pre-commit
+          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - id: save-asdf-cache
+        if: ${{ inputs.cache_asdf }}
+        name: Save asdf cache
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
+        with:
+          path: |
+            ~/.asdf/installs
+            ~/.asdf/plugins
+          key: ${{ runner.os }}-asdf-${{ hashFiles('.tool-versions') }}

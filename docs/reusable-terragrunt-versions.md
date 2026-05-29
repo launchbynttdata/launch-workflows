@@ -26,7 +26,7 @@ jobs:
     uses: launchbynttdata/launch-workflows/.github/workflows/reusable-github-matrix-tg.yml@<commit hash>
     with:
       platform_environment: sandbox
-  
+
   call-terragrunt-deploy:
     needs: [get-tg-versions, build-matrix]
     permissions:

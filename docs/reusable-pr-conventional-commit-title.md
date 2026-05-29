@@ -2,7 +2,7 @@
 
 This workflow will ensure that your pull request's title matches the Conventional Commits specification. This format is often used to drive downstream workflows like automated versioning and changelogs.
 
-This is intended for use with repositories that utilize Squash merges, as the title of the pull request is what lands on the base branch when a PR is merged. 
+This is intended for use with repositories that utilize Squash merges, as the title of the pull request is what lands on the base branch when a PR is merged.
 
 ## Configuration
 
@@ -50,7 +50,7 @@ Be sure you replace `ref` with an appropriate ref to this repository.
 
 > [!CAUTION]
 > By default, your repository may not require this workflow to succeed before a change is merged. By making this workflow required, you ensure that a successful run must be achieved prior to merge, which ensures your commit messages are consistent!
-> 
+>
 > Repositories within `launchbynttdata` are already configured with a required status check, and no further action needs to be taken.
 
 To make this workflow required, visit your repository's settings and create a new Ruleset with a required status check, as shown below:

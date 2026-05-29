@@ -70,7 +70,7 @@ runs:
         while IFS= read -r label; do
           # Skip empty lines
           [[ -z "$label" ]] && continue
-          
+
           # Check if this label should be preserved
           if should_preserve "$label"; then
             echo "Preserving label: $label"

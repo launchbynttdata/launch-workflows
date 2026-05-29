@@ -2,6 +2,10 @@
 
 A reusable set of workflows designed to help manage CI/CD complexity.
 
+## Local Development
+
+Run `make configure` to set up local development hooks via pre-commit.
+
 ## Release Process
 
 To release a new workflow, follow these steps:

@@ -1,4 +1,4 @@
-name: Dependabot Auto-Merge
+name: Pre-Commit Checks
 
 on:
   workflow_call:

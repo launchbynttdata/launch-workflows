@@ -2,14 +2,6 @@ name: Pre-Commit Checks
 
 on:
   workflow_call:
-    inputs:
-      # Placeholder input: this workflow currently takes no real inputs, but
-      # `workflow_call` requires the `inputs` map to be present.
-      _placeholder:
-        description: "Unused. Reserved for future use; do not set."
-        required: false
-        type: string
-        default: ""
 
 permissions:
   contents: read

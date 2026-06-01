@@ -41,9 +41,7 @@ To make this workflow required, visit your repository's settings and create a ne
 
 ## Inputs
 
-| Input | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `_placeholder` | `string` | No | `""` | Unused. Reserved for future use; do not set. |
+This workflow does not have any inputs.
 
 ## Secrets
 

@@ -40,6 +40,7 @@ repos:
       - id: uv-sync
         stages:
           - pre-commit
+        always_run: false
         files: ^pyproject\.toml|^uv\.lock$
       - id: uv-sync
         stages:

@@ -195,6 +195,22 @@ jobs:
         run: |
           make lint
 
+      - id: version-floor
+        name: "Verify declared Terraform version floor"
+        # Confirms required_version names a version the module can actually be
+        # loaded with, by initializing it with the oldest version the constraint
+        # admits. The guard ships via launch-terraform-skeleton, so it is absent
+        # until a repo has picked up that update; skip loudly rather than fail,
+        # and rather than pass silently.
+        shell: bash
+        run: |
+          guard=".github/scripts/check-terraform-version-floor.sh"
+          if [[ ! -f "${guard}" ]]; then
+            echo "::notice title=Version floor check skipped::${guard} is not present in this repository yet. It arrives with the next launch-terraform-skeleton update."
+            exit 0
+          fi
+          make tfmodule/check-version-floor
+
       - id: update-lint-status
         name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'

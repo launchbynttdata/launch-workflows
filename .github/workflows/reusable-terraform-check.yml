@@ -157,6 +157,28 @@ jobs:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
+      - id: tf-plugin-cache-dir
+        name: Configure Terraform plugin cache directory
+        # Terraform silently ignores the plugin cache if the directory does not
+        # already exist, so create it before any init runs.
+        shell: bash
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+
+      - id: tf-plugin-cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # Provider downloads dominate the cost of `terraform init`, and the
+        # Makefile inits the root module and every example separately, so each
+        # one currently re-downloads the same providers. A single shared cache
+        # serves all of them within a run and persists across runs.
+        name: Cache Terraform provider plugins
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-tf-plugins-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-tf-plugins-
+
       - id: configure
         name: Setup Repository for Checks
         # Ensure the 'repo' tool is installed, set up git to make the Makefile happy, and then configure to clone LCAF.
@@ -229,6 +251,28 @@ jobs:
         with:
           path: ~/.asdf
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
+
+      - id: tf-plugin-cache-dir
+        name: Configure Terraform plugin cache directory
+        # Terraform silently ignores the plugin cache if the directory does not
+        # already exist, so create it before any init runs.
+        shell: bash
+        run: |
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+
+      - id: tf-plugin-cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # Provider downloads dominate the cost of `terraform init`, and the
+        # Makefile inits the root module and every example separately, so each
+        # one currently re-downloads the same providers. A single shared cache
+        # serves all of them within a run and persists across runs.
+        name: Cache Terraform provider plugins
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-tf-plugins-${{ hashFiles('**/versions.tf') }}
+          restore-keys: |
+            ${{ runner.os }}-tf-plugins-
 
       - id: configure
         name: Setup Repository for Checks

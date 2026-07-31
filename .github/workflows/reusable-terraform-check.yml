@@ -195,7 +195,35 @@ jobs:
         run: |
           make lint
 
-      - id: version-floor
+      - id: version_floor_resolve
+        name: "Resolve declared Terraform version floor"
+        # Resolved before the check runs so the floor's toolchain can be cached
+        # by version. Emits an empty value in the two cases where there is
+        # nothing to cache -- the guard has not propagated to this repo yet, or
+        # the constraint declares no lower bound -- leaving the real diagnostic
+        # to the check step rather than failing here with something cryptic.
+        shell: bash
+        run: |
+          guard=".github/scripts/check-terraform-version-floor.sh"
+          version=""
+          if [[ -f "${guard}" ]]; then
+            version="$(bash "${guard}" --print-floor 2>/dev/null || true)"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - id: version_floor_cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306
+        # The asdf tool cache is keyed on .tool-versions and only saved on a
+        # miss, so a Terraform installed after that restore is never persisted.
+        # This entry is keyed on the resolved floor instead, so the floor's
+        # binary is downloaded once per version rather than on every run.
+        if: steps.version_floor_resolve.outputs.version != ''
+        name: Cache floor-version Terraform
+        with:
+          path: ~/.asdf/installs/terraform/${{ steps.version_floor_resolve.outputs.version }}
+          key: ${{ runner.os }}-tf-floor-${{ steps.version_floor_resolve.outputs.version }}
+
+      - id: version_floor
         name: "Verify declared Terraform version floor"
         # Confirms required_version names a version the module can actually be
         # loaded with, by initializing it with the oldest version the constraint
@@ -213,13 +241,17 @@ jobs:
 
       - id: update-lint-status
         name: "Update Terraform Lint status"
+        # Reflects the version-floor check as well as make lint, so this status
+        # cannot report success while the job is red.
         if: always() && steps.lint.outcome != 'skipped'
         uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.15.0
         with:
           check_name: "Terraform Lint"
-          status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
-            == 'failure' && 'failure' || 'error' }}
-          description: "Terraform lint ${{ steps.lint.outcome }}"
+          status: ${{ (steps.lint.outcome == 'success' && steps.version_floor.outcome
+            != 'failure') && 'success' || (steps.lint.outcome == 'failure' || steps.version_floor.outcome
+            == 'failure') && 'failure' || 'error' }}
+          description: "Terraform lint ${{ steps.lint.outcome }}, version floor ${{
+            steps.version_floor.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 

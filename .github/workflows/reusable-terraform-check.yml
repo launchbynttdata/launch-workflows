@@ -224,12 +224,21 @@ jobs:
         # nothing to cache -- the guard has not propagated to this repo yet, or
         # the constraint declares no lower bound -- leaving the real diagnostic
         # to the check step rather than failing here with something cryptic.
+        #
+        # Resolution failing is deliberately not fatal, but it should not be
+        # silent either: an unexpected failure here would otherwise leave no
+        # trace, and the check step reports its own error rather than this one.
         shell: bash
         run: |
           guard=".github/scripts/check-terraform-version-floor.sh"
           version=""
           if [[ -f "${guard}" ]]; then
-            version="$(bash "${guard}" --print-floor 2>/dev/null || true)"
+            if ! version="$(bash "${guard}" --print-floor 2>"${RUNNER_TEMP}/floor-resolve.err")"; then
+              version=""
+              if [[ -s "${RUNNER_TEMP}/floor-resolve.err" ]]; then
+                echo "::notice title=Version floor not resolved::$(head -3 "${RUNNER_TEMP}/floor-resolve.err")"
+              fi
+            fi
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
@@ -252,14 +261,21 @@ jobs:
         # admits. The guard ships via launch-terraform-skeleton, so it is absent
         # until a repo has picked up that update; skip loudly rather than fail,
         # and rather than pass silently.
+        #
+        # `result` exists because exiting 0 on a skip makes `outcome` report
+        # success, which would advertise a verified floor in the commit status
+        # when nothing ran. It is written after the check so a real failure
+        # leaves it unset and the status falls back to `outcome`.
         shell: bash
         run: |
           guard=".github/scripts/check-terraform-version-floor.sh"
           if [[ ! -f "${guard}" ]]; then
             echo "::notice title=Version floor check skipped::${guard} is not present in this repository yet. It arrives with the next launch-terraform-skeleton update."
+            echo "result=skipped" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           make tfmodule/check-version-floor
+          echo "result=success" >> "$GITHUB_OUTPUT"
 
       - id: update-lint-status
         name: "Update Terraform Lint status"
@@ -273,7 +289,7 @@ jobs:
             != 'failure') && 'success' || (steps.lint.outcome == 'failure' || steps.version_floor.outcome
             == 'failure') && 'failure' || 'error' }}
           description: "Terraform lint ${{ steps.lint.outcome }}, version floor ${{
-            steps.version_floor.outcome }}"
+            steps.version_floor.outputs.result || steps.version_floor.outcome }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 

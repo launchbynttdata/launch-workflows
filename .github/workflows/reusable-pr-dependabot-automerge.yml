@@ -36,6 +36,21 @@ jobs:
           app-id: ${{ inputs.skeleton_update_app_id }}
           private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}
 
+      - name: Check auto-merge is enabled
+        env:
+          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
+        run: |
+          allow_auto_merge="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!){repository(owner:$owner,name:$name){autoMergeAllowed}}' \
+            -f owner="${GITHUB_REPOSITORY_OWNER}" \
+            -f name="${GITHUB_REPOSITORY#*/}" \
+            --jq '.data.repository.autoMergeAllowed')"
+
+          if [[ "$allow_auto_merge" != "true" ]]; then
+            echo "::error::GitHub auto-merge is not enabled for this repository. Enable 'Allow auto-merge' in Settings > General > Pull Requests."
+            exit 1
+          fi
+
       - name: Enable auto-merge
         env:
           GITHUB_TOKEN: ${{ steps.get-app-token.outputs.token }}

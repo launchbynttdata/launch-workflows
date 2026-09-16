@@ -430,6 +430,7 @@ jobs:
         name: "make test"
         env:
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
+          AZDO_ORG_SERVICE_URL: ${{ vars.AZDO_ORG_SERVICE_URL }}
         run: |
           # Hack for Azure, reevaluate when we have another look at the Make targets
           make tfmodule/create_example_providers

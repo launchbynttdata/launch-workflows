@@ -430,8 +430,22 @@ jobs:
         name: "make test"
         env:
           GITHUB_TOKEN: ${{ steps.github-app-token.outputs.token || github.token }}
+          AUTH_AZURE: ${{ needs.validate-inputs.outputs.auth_azure }}
+          TERRAFORM_CHECK_AZURE_CLIENT_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_CLIENT_ID }}
+          TERRAFORM_CHECK_AZURE_TENANT_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_TENANT_ID }}
+          TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
         run: |
           # Hack for Azure, reevaluate when we have another look at the Make targets
+          if [[ "$AUTH_AZURE" == "true" ]]; then
+            # azure/login stores one federated assertion in the Azure CLI, and that
+            # assertion expires in about five minutes. Give Terraform renewable GitHub
+            # OIDC instead, and do not let it fall back to that CLI session.
+            export ARM_CLIENT_ID="$TERRAFORM_CHECK_AZURE_CLIENT_ID"
+            export ARM_TENANT_ID="$TERRAFORM_CHECK_AZURE_TENANT_ID"
+            export ARM_SUBSCRIPTION_ID="$TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID"
+            export ARM_USE_OIDC=true
+            export ARM_USE_CLI=false
+          fi
           make tfmodule/create_example_providers
 
           make test

@@ -100,6 +100,8 @@ jobs:
 
 Replace `ref` with an appropriate ref to this repository. For more information on OIDC setup for Azure, see the [azure/login action documentation](https://github.com/Azure/login?tab=readme-ov-file#login-with-openid-connect-oidc-recommended).
 
+`azure/login` signs in the Azure CLI for `make` and the Go tests. When Azure authentication is selected, the `make test` step also exports `ARM_CLIENT_ID`, `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_USE_OIDC=true`, and `ARM_USE_CLI=false` for Terraform. The AzureRM provider then requests a fresh GitHub OIDC token each time its Azure access token needs renewal. `ARM_OIDC_TOKEN` is left unset, so Terraform does not keep the single short-lived assertion from the CLI login. The caller job needs `id-token: write`, as in the example above.
+
 ## Inputs
 
 | Name | Description | Required | Default |

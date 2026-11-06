@@ -1,0 +1,20 @@
+name: Action Tests
+
+on:
+  pull_request:
+    types: [ opened, reopened, synchronize, ready_for_review ]
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  update-status-check:
+    name: update-status-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Test head SHA resolution
+        run: .github/actions/update-status-check/resolve-head-sha.test.sh

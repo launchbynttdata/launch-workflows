@@ -7,9 +7,10 @@ This action wraps the Commit Status API with a simple interface: provide a check
 ## Behavior
 
 This action will:
-1. Validate that the provided `status` is one of the accepted values (`error`, `failure`, `pending`, `success`)
-2. Call the GitHub Commit Status API to create or update the named status check on the specified commit SHA
-3. Optionally attach a human-readable description and a target URL to the status
+1. On pull request events, look up the pull request's current head SHA and use it in place of `sha`. If the lookup fails (for example, the token lacks `pull-requests: read`) or doesn't return a full commit SHA, it logs a warning and keeps `sha`
+2. Validate that the provided `status` is one of the accepted values (`error`, `failure`, `pending`, `success`)
+3. Call the GitHub Commit Status API to create or update the named status check on the resulting commit SHA
+4. Optionally attach a human-readable description and a target URL to the status
 
 ## Inputs
 
@@ -17,7 +18,7 @@ This action will:
 |-------|-------------|----------|---------|
 | `check_name` | The name (context) of the status check to create or update | Yes | — |
 | `status` | The state to set. One of: `error`, `failure`, `pending`, `success` | Yes | — |
-| `sha` | The commit SHA to attach the status check to | No | `${{ github.sha }}` |
+| `sha` | The commit SHA to attach the status check to. On pull request events the PR's current head SHA is used instead when it can be looked up | No | `${{ github.event.pull_request.head.sha \|\| github.sha }}` |
 | `description` | A short human-readable description of the status | No | `""` |
 | `target_url` | A URL to associate with the status (e.g. a link to a build log) | No | `""` |
 | `github_token` | GitHub token for API access | No | `${{ github.token }}` |
@@ -109,3 +110,5 @@ This action requires the following permission on the workflow job:
 permissions:
   statuses: write
 ```
+
+On pull request events, also grant `pull-requests: read` so the action can look up the PR's current head SHA. Without it, the action warns and sets the status on `sha`.

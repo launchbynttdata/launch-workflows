@@ -16,5 +16,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Test head SHA resolution
+      - name: Test head SHA resolution and action wiring
         run: .github/actions/update-status-check/resolve-head-sha.test.sh

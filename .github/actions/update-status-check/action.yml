@@ -10,8 +10,12 @@ inputs:
       failure, pending, success."
     required: true
   sha:
-    description: "The commit SHA to attach the status check to. Defaults to the PR
-      head SHA if available, otherwise the SHA that triggered the workflow."
+    description: "The full 40-character commit SHA to attach the status check to.
+      Defaults to the PR head SHA from the event payload if available, otherwise
+      the SHA that triggered the workflow. On pull request events the action looks
+      up the PR's current head SHA at run time and uses it instead of this input,
+      whether defaulted or passed explicitly; the lookup needs `pull-requests:
+      read`. If the lookup fails, the action logs a warning and keeps this input."
     required: false
     default: ${{ github.event.pull_request.head.sha || github.sha }}
   description:
@@ -42,7 +46,12 @@ runs:
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: |
         source "${GITHUB_ACTION_PATH}/resolve-head-sha.sh"
-        resolve_head_sha "$GITHUB_REPOSITORY" "$PR_NUMBER"
+        SHA="$(resolve_head_sha "$GITHUB_REPOSITORY" "$PR_NUMBER" "$SHA")"
+
+        if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+          echo "Error: Invalid sha '${SHA}'. Must be a full 40-character lowercase commit SHA."
+          exit 1
+        fi
 
         VALID_STATES=("error" "failure" "pending" "success")
         VALID=false
@@ -67,7 +76,7 @@ runs:
           --arg target_url "$TARGET_URL" \
           '{state: $state, context: $context, description: $description, target_url: $target_url}')
 
-        gh api -X POST "repos/${{ github.repository }}/statuses/${SHA}" \
+        gh api -X POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
           --input - <<< "$PAYLOAD"
 
         echo

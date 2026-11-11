@@ -7,10 +7,11 @@ This action wraps the Commit Status API with a simple interface: provide a check
 ## Behavior
 
 This action will:
-1. On pull request events, look up the pull request's current head SHA and use it in place of `sha`. If the lookup fails (for example, the token lacks `pull-requests: read`) or doesn't return a full commit SHA, it logs a warning and keeps `sha`
-2. Validate that the provided `status` is one of the accepted values (`error`, `failure`, `pending`, `success`)
-3. Call the GitHub Commit Status API to create or update the named status check on the resulting commit SHA
-4. Optionally attach a human-readable description and a target URL to the status
+1. On pull request events, look up the pull request's current head SHA. When the lookup returns a full commit SHA, it replaces `sha`, whether `sha` was defaulted or passed explicitly. If the lookup fails (for example, the token lacks `pull-requests: read`) or doesn't return a full commit SHA, the action keeps `sha` and logs a warning with the cause
+2. Fail if the resulting SHA isn't a full 40-character lowercase commit SHA
+3. Validate that the provided `status` is one of the accepted values (`error`, `failure`, `pending`, `success`)
+4. Call the GitHub Commit Status API to create or update the named status check on the resulting commit SHA
+5. Optionally attach a human-readable description and a target URL to the status
 
 ## Inputs
 
@@ -18,7 +19,7 @@ This action will:
 |-------|-------------|----------|---------|
 | `check_name` | The name (context) of the status check to create or update | Yes | — |
 | `status` | The state to set. One of: `error`, `failure`, `pending`, `success` | Yes | — |
-| `sha` | The commit SHA to attach the status check to. On pull request events the PR's current head SHA is used instead when it can be looked up | No | `${{ github.event.pull_request.head.sha \|\| github.sha }}` |
+| `sha` | The full 40-character commit SHA to attach the status check to. On pull request events, a successful lookup of the PR's current head SHA replaces this input, whether defaulted or explicit; otherwise the input is kept and a warning is logged | No | `${{ github.event.pull_request.head.sha \|\| github.sha }}` |
 | `description` | A short human-readable description of the status | No | `""` |
 | `target_url` | A URL to associate with the status (e.g. a link to a build log) | No | `""` |
 | `github_token` | GitHub token for API access | No | `${{ github.token }}` |
@@ -91,7 +92,7 @@ Use `pending` to signal that a check is in progress, then update it on completio
 
 ### Targeting a Specific Commit SHA
 
-Override the default SHA to set a status on a commit other than the one that triggered the workflow:
+Override the default SHA to set a status on a commit other than the one that triggered the workflow. The SHA must be the full 40 characters:
 
 ```yaml
 - name: Set status on a specific commit
@@ -99,8 +100,10 @@ Override the default SHA to set a status on a commit other than the one that tri
   with:
     check_name: "my-check"
     status: "success"
-    sha: "abc1234def5678"
+    sha: "0123456789abcdef0123456789abcdef01234567"
 ```
+
+On pull request events, a successful lookup of the PR's head SHA replaces an explicit `sha`, so a non-head SHA only takes effect outside pull request events, or when the lookup fails and the action logs a warning.
 
 ## Required Permissions
 

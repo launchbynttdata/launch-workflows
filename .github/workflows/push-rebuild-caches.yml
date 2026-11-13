@@ -1,0 +1,16 @@
+name: Rebuild Caches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .pre-commit-config.yaml
+      - .tool-versions
+  workflow_dispatch:
+
+jobs:
+  rebuild-caches:
+    name: Rebuild Caches
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-rebuild-caches.yml

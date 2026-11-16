@@ -88,14 +88,29 @@ jobs:
         run: |
           ALLOWED_AUTHORS="dependabot[bot] launch-skeleton-auto-updater[bot]"
 
-          # Get all commit authors on this PR
-          AUTHORS=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
-            --jq '.[].author.login' | sort -u)
+          # The commits endpoint returns 30 commits per page and lists at most
+          # 250, so page through it and approve only when every commit on the
+          # PR was listed. One line per commit. `gh --jq` prints null as an
+          # empty line, which word splitting would drop, so a commit with no
+          # linked account gets a placeholder that is not an allowed author.
+          EXPECTED_COMMITS=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.commits')
+          COMMIT_AUTHORS=$(gh api --paginate "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[] | .author.login // "no-linked-account"')
+          LISTED_COMMITS=0
+          if [[ -n "$COMMIT_AUTHORS" ]]; then
+            LISTED_COMMITS=$(printf '%s\n' "$COMMIT_AUTHORS" | wc -l | tr -d ' ')
+          fi
+          AUTHORS=$(printf '%s\n' "$COMMIT_AUTHORS" | sort -u)
 
-          echo "Commit authors on this PR:"
+          echo "Commit authors on this PR ($LISTED_COMMITS of $EXPECTED_COMMITS commits listed):"
           echo "$AUTHORS"
 
           SHOULD_APPROVE=true
+          if [[ ! "$EXPECTED_COMMITS" =~ ^[1-9][0-9]*$ ]] || [[ "$LISTED_COMMITS" != "$EXPECTED_COMMITS" ]]; then
+            echo "Could not list every commit on this PR, so it cannot be confirmed as automated."
+            SHOULD_APPROVE=false
+          fi
+
           for author in $AUTHORS; do
             if [[ ! " $ALLOWED_AUTHORS " =~ " $author " ]]; then
               echo "Found non-automated author: $author"
@@ -160,10 +175,10 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          echo "Non-automated commits detected. Revoking any existing automated approvals..."
+          echo "Not every commit is confirmed as automated. Revoking any existing automated approvals..."
 
-          # Get all reviews on this PR
-          REVIEWS=$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews")
+          # Get all reviews on this PR; each page is a separate JSON array, which jq reads in turn
+          REVIEWS=$(gh api --paginate "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews")
 
           # Dismiss Alpha's approval if present
           ALPHA_REVIEW_ID=$(echo "$REVIEWS" | jq -r ".[] | select(.user.login == \"${ALPHA_SLUG}[bot]\" and .state == \"APPROVED\") | .id" | head -1)

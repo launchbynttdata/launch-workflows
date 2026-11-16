@@ -18,3 +18,13 @@ jobs:
 
       - name: Test head SHA resolution and action wiring
         run: .github/actions/update-status-check/resolve-head-sha.test.sh
+
+  automated-approvals:
+    name: automated-approvals
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Test the commit-author check and approval revocation
+        run: .github/tests/reusable-pr-automated-approvals.test.sh

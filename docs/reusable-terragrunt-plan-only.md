@@ -233,6 +233,7 @@ Replace `ref` with an appropriate ref to this repository, and replace the `aws_a
 | `aws_assume_role_arn` | ARN of the role to assume prior to Terragrunt invocation. Required when `auth_method` includes `aws`. | No | — |
 | `github_app_id` | GitHub App ID for authentication. Required when `auth_method` includes `github`. Defaults to `vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID`. | No | `${{ vars.TERRAGRUNT_DEPLOY_GITHUB_APP_ID }}` |
 | `comment_plan_results` | When `true` (and the workflow is triggered by a `pull_request` event), post a comment on the PR summarizing the plan output via [`borchero/terraform-plan-comment`](https://github.com/borchero/terraform-plan-comment). | No | `true` |
+| `refresh` | When `false`, plan with `-refresh=false`: compare the configuration with the stored state without reading existing resources back from the providers, and mark the PR comment header "(not refreshed)". Use it when the plan's credentials can't read every attribute the configuration manages. Changes made outside Terraform don't appear in such a plan, and resources being imported are still read, so they can show changes for attributes those credentials can't see. | No | `true` |
 | `before_plan_commands` | Commands to run prior to executing Terragrunt plan. | No | `""` |
 | `after_plan_commands` | Commands to run after executing Terragrunt plan. | No | `""` |
 

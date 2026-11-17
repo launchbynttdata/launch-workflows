@@ -58,6 +58,13 @@ on:
         required: false
         type: boolean
         default: true
+      refresh:
+        description: "Refresh resources from the providers before planning. Set to false
+          to compare the configuration with the stored state only, for credentials that
+          can't read every attribute; resources being imported are still read."
+        required: false
+        type: boolean
+        default: true
       before_plan_commands:
         description: "Commands to run prior to executing Terragrunt plan."
         required: false
@@ -313,7 +320,7 @@ jobs:
           tg_dir: "${{ inputs.tg_dir }}"
           # Absolute path is used here to keep Terragrunt from burying the planfile in a
           # subdirectory, to make it more accessible to the comment action below.
-          tg_command: "plan -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
+          tg_command: "plan${{ !inputs.refresh && ' -refresh=false' || '' }} -out=${{ github.workspace }}/${{ inputs.tg_dir }}/${{ github.sha }}.tfplan"
 
       - name: "Update Terragrunt Plan status"
         if: always() && steps.plan.outcome != 'skipped'
@@ -338,5 +345,5 @@ jobs:
           planfile: ${{ github.sha }}.tfplan
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
-          header: "Terragrunt Plan (${{ inputs.tg_dir }})"
+          header: "Terragrunt Plan (${{ inputs.tg_dir }})${{ !inputs.refresh && ' (not refreshed)' || '' }}"
           skip-comment: ${{ github.event_name != 'pull_request' || !inputs.comment_plan_results }}

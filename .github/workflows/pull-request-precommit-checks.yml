@@ -16,7 +16,7 @@ jobs:
     steps:
       - id: checkout
         name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - id: setup-python
         name: Set up Python 3.14
@@ -67,7 +67,7 @@ jobs:
       - id: set-status-check
         name: Set Status Check
         if: always()
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Pre-Commit Checks"
           status: ${{ steps.pre-commit.outcome == 'success' && 'success' ||

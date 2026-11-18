@@ -110,7 +110,7 @@ jobs:
 
       - name: Configure Mise
         id: configure-mise
-        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@0.15.0
+        uses: launchbynttdata/launch-workflows/.github/actions/terragrunt-configure-mise@c57235a204b77b6622a0e99fe29dca5eecf80b2f # 0.15.0
         with:
           tf_version: ${{ inputs.tf_version }}
           tg_version: ${{ inputs.tg_version }}

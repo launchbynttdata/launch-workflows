@@ -75,7 +75,7 @@ jobs:
           key: ${{ runner.os }}-tool-versions-${{ hashFiles('.tool-versions') }}
 
       - name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -89,7 +89,7 @@ jobs:
 
       - name: "Update Terraform Lint status"
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Lint"
           status: ${{ steps.lint.outcome == 'success' && 'success' || steps.lint.outcome
@@ -105,7 +105,7 @@ jobs:
           subscription-id: ${{ secrets.TERRAFORM_CHECK_AZURE_SUBSCRIPTION_ID }}
 
       - name: "Set Terraform Tests status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -119,7 +119,7 @@ jobs:
 
       - name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome

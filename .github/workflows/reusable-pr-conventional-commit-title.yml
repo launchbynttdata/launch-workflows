@@ -133,7 +133,7 @@ jobs:
 
       - name: PR Conventional Commit Validation
         id: pr-validation
-        uses: ytanikin/pr-conventional-commits@1.5.1
+        uses: ytanikin/pr-conventional-commits@fda730cb152c05a849d6d84325e50c6182d9d1e9 # 1.5.1
         with:
           task_types: ${{ inputs.task_types }}
           scope_types: ${{ inputs.scope_types }}
@@ -206,7 +206,7 @@ jobs:
       - id: set-status-check
         name: Set Status Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Conventional Commit PR Title"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||
@@ -218,7 +218,7 @@ jobs:
       - id: set-status-check-legacy
         name: Set Legacy Check
         if: ${{ inputs.comment_on_failure }}
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Label Pull Request / Label Pull Request"
           status: ${{ steps.pr-validation.outcome == 'success' && 'success' ||

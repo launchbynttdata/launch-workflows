@@ -204,7 +204,7 @@ jobs:
 
       - id: set-lint-pending
         name: "Set Terraform Lint status to pending"
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Lint"
           status: "pending"
@@ -282,7 +282,7 @@ jobs:
         # Reflects the version-floor check as well as make lint, so this status
         # cannot report success while the job is red.
         if: always() && steps.lint.outcome != 'skipped'
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Lint"
           status: ${{ (steps.lint.outcome == 'success' && steps.version_floor.outcome
@@ -418,7 +418,7 @@ jobs:
       - id: set-tests-pending
         name: "Set Terraform Tests status to pending"
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Tests"
           status: "pending"
@@ -454,7 +454,7 @@ jobs:
         name: "Update Terraform Tests status"
         if: always() && steps.test.outcome != 'skipped'
         continue-on-error: true
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Terraform Tests"
           status: ${{ steps.test.outcome == 'success' && 'success' || steps.test.outcome
@@ -474,7 +474,7 @@ jobs:
       - id: update-legacy-status-checks-aws
         name: "Add AWS Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-aws-')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Check AWS Terraform Code / Check AWS Terraform Code"
           status: "success"
@@ -486,7 +486,7 @@ jobs:
       - id: update-legacy-status-checks-azure
         name: "Add Azure Legacy Status Check"
         if: startsWith(github.event.repository.name, 'tf-az')
-        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@0.17.3
+        uses: launchbynttdata/launch-workflows/.github/actions/update-status-check@bd6d54da9fb3c3dc85723d39278a575c0407ac1d # 0.17.3
         with:
           check_name: "Check Azure Terraform Code / Check Azure Terraform Code"
           status: "success"

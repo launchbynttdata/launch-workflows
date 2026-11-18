@@ -329,7 +329,7 @@ jobs:
           check_name: "Terragrunt Plan (${{ inputs.tg_dir }})"
           status: ${{ steps.plan.outcome == 'success' && 'success' || steps.plan.outcome
             == 'failure' && 'failure' || 'error' }}
-          description: "Terragrunt plan ${{ steps.plan.outcome }}"
+          description: "Terragrunt plan ${{ steps.plan.outcome }}${{ !inputs.refresh && ' (not refreshed)' || '' }}"
           target_url: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
             github.run_id }}"
 
@@ -345,5 +345,10 @@ jobs:
           planfile: ${{ github.sha }}.tfplan
           working-directory: ${{ inputs.tg_dir }}
           pr-number: ${{ github.event.pull_request.number }}
-          header: "Terragrunt Plan (${{ inputs.tg_dir }})${{ !inputs.refresh && ' (not refreshed)' || '' }}"
+          # The action finds its existing comment by the first line only, so the note goes
+          # on later lines to keep the same comment when a PR's refresh setting changes.
+          header: |-
+            Terragrunt Plan (${{ inputs.tg_dir }})
+
+            ${{ !inputs.refresh && '_Not refreshed: planned with `-refresh=false`, so changes made outside Terraform are not shown._' || '' }}
           skip-comment: ${{ github.event_name != 'pull_request' || !inputs.comment_plan_results }}

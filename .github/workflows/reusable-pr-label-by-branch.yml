@@ -79,7 +79,7 @@ jobs:
 
           rm first-time-comment.md
 
-      - uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@0.14.2
+      - uses: launchbynttdata/launch-workflows/.github/actions/remove-dependabot-labels@6da23bdf646c22af67b7999c488be6bf686e6243 # 0.14.2
         if: ${{ inputs.remove_dependabot_labels }}
         id: remove-dependabot-labels
         with:

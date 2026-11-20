@@ -14,7 +14,7 @@ Go to:
 
 `Settings > General > Pull Requests > Allow auto-merge`
 
-If auto-merge is disabled, the workflow stops before attempting the merge and reports a clear configuration error.
+If auto-merge is disabled and the pull request can't be merged immediately, the workflow fails with a clear configuration error.
 
 ## Usage
 

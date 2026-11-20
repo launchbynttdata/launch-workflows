@@ -36,23 +36,24 @@ jobs:
           app-id: ${{ inputs.skeleton_update_app_id }}
           private-key: ${{ secrets.LAUNCH_SKELETON_UPDATE_KEY }}
 
-      - name: Check auto-merge is enabled
-        env:
-          GH_TOKEN: ${{ steps.get-app-token.outputs.token }}
-        run: |
-          allow_auto_merge="$(gh api graphql \
-            -f query='query($owner:String!,$name:String!){repository(owner:$owner,name:$name){autoMergeAllowed}}' \
-            -f owner="${GITHUB_REPOSITORY_OWNER}" \
-            -f name="${GITHUB_REPOSITORY#*/}" \
-            --jq '.data.repository.autoMergeAllowed')"
-
-          if [[ "$allow_auto_merge" != "true" ]]; then
-            echo "::error::GitHub auto-merge is not enabled for this repository. Enable 'Allow auto-merge' in Settings > General > Pull Requests."
-            exit 1
-          fi
-
+      # `gh pr merge --auto` merges immediately when the PR is already mergeable, even with
+      # repository auto-merge disabled, so the setting is only checked to explain a failure.
       - name: Enable auto-merge
         env:
           GITHUB_TOKEN: ${{ steps.get-app-token.outputs.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: |
+          if gh pr merge --auto --squash "$PR_URL"; then
+            exit 0
+          fi
+
+          allow_auto_merge="$(gh api graphql \
+            -f query='query($owner:String!,$name:String!){repository(owner:$owner,name:$name){autoMergeAllowed}}' \
+            -f owner="${GITHUB_REPOSITORY_OWNER}" \
+            -f name="${GITHUB_REPOSITORY#*/}" \
+            --jq '.data.repository.autoMergeAllowed')" || true
+
+          if [[ "$allow_auto_merge" == "false" ]]; then
+            echo "::error::GitHub auto-merge is not enabled for this repository. Enable 'Allow auto-merge' in Settings > General > Pull Requests."
+          fi
+          exit 1

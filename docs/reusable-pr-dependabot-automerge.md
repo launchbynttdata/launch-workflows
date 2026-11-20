@@ -8,7 +8,7 @@ A GitHub App token is used to perform the merge rather than `GITHUB_TOKEN`. This
 
 ## Prerequisite
 
-GitHub auto-merge must be enabled on the repository using this workflow.
+GitHub auto-merge must be enabled on the repository using this workflow for Dependabot pull requests that have to wait for required checks or approvals. A pull request that is already mergeable when the workflow runs is merged directly, whatever the setting.
 
 Go to:
 

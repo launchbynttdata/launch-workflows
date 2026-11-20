@@ -86,16 +86,47 @@ jobs:
         name: Get Repository Custom Properties
         uses: launchbynttdata/launch-workflows/.github/actions/get-custom-properties@c57235a204b77b6622a0e99fe29dca5eecf80b2f # 0.15.0
 
+      # copier would otherwise apply the skeleton's newest tag, and run its tasks
+      # under --trust, even if the tag sits on an unreviewed commit. The script
+      # comes from this workflow's own commit, and is kept out of the working tree
+      # so it can't be committed with the update.
+      - id: select-skeleton-ref
+        name: Select a Reviewed Skeleton Release
+        env:
+          CUSTOM_PROPERTIES: ${{ steps.get-repo-custom-properties.outputs.properties }}
+          SCRIPT_URL: https://raw.githubusercontent.com/launchbynttdata/launch-workflows/${{ job.workflow_sha }}/.github/scripts/select-skeleton-ref.py
+        run: |
+          set -euo pipefail
+          PRERELEASE=$(echo "$CUSTOM_PROPERTIES" | jq -r '.[] | select(.property_name == "prerelease") | .value')
+          SCRIPT="${RUNNER_TEMP}/select-skeleton-ref.py"
+          SKELETON="${RUNNER_TEMP}/skeleton"
+          curl --fail --silent --show-error --location "$SCRIPT_URL" --output "$SCRIPT"
+          git clone --quiet --filter=blob:none --no-checkout https://github.com/launchbynttdata/launch-terraform-skeleton "$SKELETON"
+          git -C "$SKELETON" fetch --quiet --tags origin
+          FLAGS=()
+          if [ "$PRERELEASE" == "true" ]; then
+            FLAGS+=(--prereleases)
+          fi
+          REF=$(uv run --no-project --with packaging python3 "$SCRIPT" --answers .copier-answers.yml --skeleton "$SKELETON" "${FLAGS[@]}")
+          echo "Applying skeleton release ${REF}"
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+
       - id: run-updates
         name: Run Updates from Skeleton
         env:
           RECOPY: ${{ inputs.recopy }}
           CUSTOM_PROPERTIES: ${{ steps.get-repo-custom-properties.outputs.properties }}
+          SKELETON_REF: ${{ steps.select-skeleton-ref.outputs.ref }}
         run: |
           PRERELEASE=$(echo "$CUSTOM_PROPERTIES" | jq -r '.[] | select(.property_name == "prerelease") | .value')
 
+          if [ -z "$SKELETON_REF" ]; then
+            echo "No reviewed skeleton release was selected"
+            exit 1
+          fi
+
           COPIER_CMD="update"
-          COPIER_FLAGS="--defaults --trust"
+          COPIER_FLAGS="--defaults --trust --vcs-ref $SKELETON_REF"
           if [ "$RECOPY" == "true" ]; then
             COPIER_CMD="recopy"
             COPIER_FLAGS="$COPIER_FLAGS --overwrite"

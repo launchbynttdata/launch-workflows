@@ -6,6 +6,16 @@ This workflow only runs when the PR actor is `dependabot[bot]`. For all other ac
 
 A GitHub App token is used to perform the merge rather than `GITHUB_TOKEN`. This ensures that the resulting push to the default branch is attributed to the GitHub App rather than `dependabot[bot]`, which allows downstream workflows (such as a release process) to be triggered as expected. When Dependabot performs the merge directly, GitHub suppresses re-triggering of actions to prevent infinite loops.
 
+## Prerequisite
+
+GitHub auto-merge must be enabled on the repository using this workflow for Dependabot pull requests that have to wait for required checks or approvals. A pull request that is already mergeable when the workflow runs is merged directly, whatever the setting.
+
+Go to:
+
+`Settings > General > Pull Requests > Allow auto-merge`
+
+If auto-merge is disabled and the pull request can't be merged immediately, the workflow fails with a clear configuration error.
+
 ## Usage
 
 Add the following workflow to your repository (suggested name: `.github/workflows/pr-dependabot-automerge.yml`):

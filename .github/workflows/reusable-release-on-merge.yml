@@ -90,8 +90,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # The app's key is readable only by jobs the environment admits, and the job's
-  # own GITHUB_TOKEN is read-only, so only the app can create the tag.
+  # RELEASE_APP_PRIVATE_KEY must exist only in the environment: a repository or
+  # organization secret of the same name would also satisfy this job, and any
+  # branch could read it. The check below proves the settings resolve, not where.
   create-release-with-app:
     if: inputs.release_environment != ''
     environment:
@@ -111,7 +112,7 @@ jobs:
           HAS_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY != '' }}
         run: |
           if [ -z "$APP_ID" ] || [ "$HAS_KEY" != "true" ]; then
-            echo "::error::The '${ENVIRONMENT}' environment needs the variable RELEASE_APP_ID and the secret RELEASE_APP_PRIVATE_KEY."
+            echo "::error::RELEASE_APP_ID or RELEASE_APP_PRIVATE_KEY is not set. Define both in the '${ENVIRONMENT}' environment only."
             exit 1
           fi
       - name: Delay for GraphQL consistency

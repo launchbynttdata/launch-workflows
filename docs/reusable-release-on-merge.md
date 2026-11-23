@@ -118,8 +118,9 @@ By default the release and its tag are created with the job's `GITHUB_TOKEN`. To
 
 1. Create a GitHub App with repository permissions **Contents: Read and write** and **Pull requests: Read-only**, no webhook, and install it only on the repositories that release with it.
 2. In each of those repositories, create an environment (for example `release`) whose deployment branches are limited to the default branch, with the variable `RELEASE_APP_ID` (the app's ID) and the secret `RELEASE_APP_PRIVATE_KEY` (its private key).
-3. Pass the environment's name as `release_environment`. The job then runs in that environment, its own `GITHUB_TOKEN` is read-only, and release-drafter uses a token for the app scoped to the calling repository. If the environment lacks either setting, or refuses the run, the job fails and no tag is created.
-4. Add a creation restriction to the repository's tag ruleset, with the app (and, if releases are also published by hand, the repository admin role) as bypass actors.
+3. Make sure no repository or organization secret named `RELEASE_APP_PRIVATE_KEY` is visible to the repository (`gh api repos/<owner>/<repo>/actions/secrets` and `.../actions/organization-secrets` list the names). GitHub falls back to a broader secret of the same name when the environment lacks it, and any branch could read that one. The workflow checks only that both settings resolve, not where they're defined.
+4. Pass the environment's name as `release_environment`. The job then runs in that environment, its own `GITHUB_TOKEN` is read-only, and release-drafter uses a token for the app scoped to the calling repository. If either setting is missing, or the environment refuses the run, the job fails and no tag is created.
+5. Add a creation restriction to the repository's tag ruleset, with the app (and, if releases are also published by hand, the repository admin role) as bypass actors.
 
 The app has read-only access to pull requests, so keep `disable_autolabeler` at its default of `true` when using it.
 

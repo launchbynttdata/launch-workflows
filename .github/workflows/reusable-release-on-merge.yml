@@ -47,14 +47,26 @@ on:
           will be created as a draft. Default: true"
         required: false
         default: true
+      release_environment:
+        type: string
+        description: "An environment in the calling repository that holds a release app's
+          ID (variable RELEASE_APP_ID) and private key (secret RELEASE_APP_PRIVATE_KEY).
+          When set, the release and its tag are created with that app's token instead of
+          GITHUB_TOKEN, so a tag ruleset can restrict tag creation to the app. Limit the
+          environment's deployment branches to the default branch. Default: empty
+          string (use GITHUB_TOKEN)"
+        required: false
+        default: ""
     outputs:
       release_version:
         description: "The version of the release that was created by this workflow. This
           is the tag name of the release."
-        value: ${{ jobs.create-release.outputs.release_version }}
+        value: ${{ jobs.create-release.outputs.release_version ||
+          jobs.create-release-with-app.outputs.release_version }}
 
 jobs:
   create-release:
+    if: inputs.release_environment == ''
     permissions:
       contents: write
       pull-requests: write
@@ -63,7 +75,7 @@ jobs:
       release_version: ${{ steps.release-drafter.outputs.tag_name }}
     steps:
       - name: Delay for GraphQL consistency
-        run: sleep $GRAPHQL_DELAY
+        run: sleep "$GRAPHQL_DELAY"
         env:
           GRAPHQL_DELAY: ${{ inputs.graphql_delay }}
       - uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7
@@ -77,3 +89,53 @@ jobs:
           latest: ${{ inputs.latest }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # RELEASE_APP_PRIVATE_KEY must exist only in the environment: a repository or
+  # organization secret of the same name would also satisfy this job, and any
+  # branch could read it. The check below proves the settings resolve, not where.
+  create-release-with-app:
+    if: inputs.release_environment != ''
+    environment:
+      name: ${{ inputs.release_environment }}
+      deployment: false
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.release-drafter.outputs.tag_name }}
+    steps:
+      - name: Check Release App Settings
+        env:
+          ENVIRONMENT: ${{ inputs.release_environment }}
+          APP_ID: ${{ vars.RELEASE_APP_ID }}
+          HAS_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY != '' }}
+        run: |
+          if [ -z "$APP_ID" ] || [ "$HAS_KEY" != "true" ]; then
+            echo "::error::RELEASE_APP_ID or RELEASE_APP_PRIVATE_KEY is not set. Define both in the '${ENVIRONMENT}' environment only."
+            exit 1
+          fi
+      - name: Delay for GraphQL consistency
+        run: sleep "$GRAPHQL_DELAY"
+        env:
+          GRAPHQL_DELAY: ${{ inputs.graphql_delay }}
+      - id: release-app-token
+        name: Create Release App Token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: read
+      - uses: release-drafter/release-drafter@6a93d829887aa2e0748befe2e808c66c0ec6e4c7
+        id: release-drafter
+        with:
+          config-name: ${{ inputs.config_name }}
+          commitish: ${{ inputs.commitish }}
+          disable-autolabeler: ${{ inputs.disable_autolabeler }}
+          publish: ${{ inputs.publish }}
+          prerelease-identifier: ${{ inputs.prerelease_identifier }}
+          latest: ${{ inputs.latest }}
+        env:
+          GITHUB_TOKEN: ${{ steps.release-app-token.outputs.token }}

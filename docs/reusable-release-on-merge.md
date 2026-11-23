@@ -112,16 +112,43 @@ Assuming the draft remains and a PR for a minor version is merged, the RC tag is
 - 1.1.0-rc0 (still a prerelease, latest)
 - 1.1.0 (our original draft is renamed and its body is updated)
 
+## Creating tags with a release app
+
+By default the release and its tag are created with the job's `GITHUB_TOKEN`. To limit tag creation with a tag ruleset to your release process, create releases with a dedicated GitHub App whose key only the default branch can read, and make that app a bypass actor:
+
+1. Create a GitHub App with repository permissions **Contents: Read and write** and **Pull requests: Read-only**, no webhook, and install it only on the repositories that release with it.
+2. In each of those repositories, create an environment (for example `release`) whose deployment branches are limited to the default branch, with the variable `RELEASE_APP_ID` (the app's ID) and the secret `RELEASE_APP_PRIVATE_KEY` (its private key).
+3. Make sure no repository or organization secret named `RELEASE_APP_PRIVATE_KEY` is visible to the repository (`gh api repos/<owner>/<repo>/actions/secrets` and `.../actions/organization-secrets` list the names). GitHub falls back to a broader secret of the same name when the environment lacks it, and any branch could read that one. The workflow checks only that both settings resolve, not where they're defined.
+4. Pass the environment's name as `release_environment`. The job then runs in that environment, its own `GITHUB_TOKEN` is read-only, and release-drafter uses a token for the app scoped to the calling repository. If either setting is missing, or the environment refuses the run, the job fails and no tag is created.
+5. Add a creation restriction to the repository's tag ruleset, with the app (and, if releases are also published by hand, the repository admin role) as bypass actors.
+
+The app has read-only access to pull requests, so keep `disable_autolabeler` at its default of `true` when using it.
+
+```yaml
+  release-candidate-on-merge:
+    name: "Create and Publish Prerelease on Merge"
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: launchbynttdata/launch-workflows/.github/workflows/reusable-release-on-merge.yml@ref
+    with:
+      prerelease_identifier: "rc"
+      release_environment: "release"
+    secrets: inherit # pragma: allowlist secret
+```
+
 ## Inputs
 
 | Input | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
+| `graphql_delay` | `number` | No | `15` | Seconds to wait before creating the release, so pull requests merged through the GraphQL API are visible to release-drafter. |
 | `config_name` | `string` | No | `release-drafter.yml` | The name of the release drafter config file to use. |
 | `commitish` | `string` | No | `main` | The release target, i.e. the branch or commit the release should point to. |
 | `latest` | `boolean` | No | `true` | Whether this release should be marked as the latest release. |
 | `disable_autolabeler` | `boolean` | No | `true` | Whether to disable the autolabeler. Should remain disabled if pull requests are labeled by another workflow. |
 | `prerelease_identifier` | `string` | No | `""` (empty) | The identifier to use for prereleases, e.g. `rc` or `beta`. When set, the release is marked as a prerelease and the tag is suffixed with this identifier. |
 | `publish` | `boolean` | No | `true` | Whether to publish the release immediately. When `false`, the release is created as a draft. |
+| `release_environment` | `string` | No | `""` (empty) | An environment holding `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY`. When set, the release and tag are created with that app's token instead of `GITHUB_TOKEN`; see [Creating tags with a release app](#creating-tags-with-a-release-app). |
 
 ## Outputs
 
